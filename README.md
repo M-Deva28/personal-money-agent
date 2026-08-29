@@ -7,21 +7,45 @@ transactions and subscriptions, flags waste/fraud/forgotten refunds, and
 takes bounded, explainable action — with every decision logged to an
 audit trail.
 
-## Status: Day 1 — core detection + feedback loop + LLM layer working ✅
+## Status: Day 2 — FastAPI service working end-to-end ✅
 
 - [x] Synthetic dataset with planted, labeled patterns (`data/`)
 - [x] Rule-based detection engine — 6 patterns, confidence-gated (`src/detector.py`)
 - [x] Audit trail logger — every decision explained and logged (`src/audit.py`)
-- [x] Scoring pipeline — precision/recall against ground truth (`src/score.py`)
+- [x] Scoring pipeline — precision/recall against ground truth (`src/score.py`, `src/scoring.py`)
 - [x] Feedback loop — per-user, per-merchant adaptive thresholds (`src/feedback.py`)
 - [x] LLM layer — reviews medium-confidence flags only, degrades gracefully without API key (`src/llm_reasoner.py`)
-- [ ] FastAPI wrapper + endpoints (Day 2)
-- [ ] Razorpay test-mode wiring for real "pause/refund" actions (Day 3-4)
+- [x] Razorpay test-mode action executor — mocks gracefully without keys (`src/razorpay_actions.py`)
+- [x] FastAPI service — `/flags`, `/feedback`, `/audit`, `/score` all tested live (`src/main.py`)
+- [ ] Simple dashboard UI on top of the API (Day 2-3)
+- [ ] Real Razorpay test-mode keys wired in (Day 3-4)
 - [ ] Finance mode: spend categorization + forecast (Day 5)
 - [ ] Growth mode: one scripted example (Day 6)
-- [ ] Dashboard UI unifying all four (Day 6)
 - [ ] End-to-end run + final metrics (Day 7)
 - [ ] Repo polish + pitch video (Day 8)
+
+## Run the API
+
+```bash
+cd src
+uvicorn main:app --reload --port 8000
+```
+
+Then visit `http://localhost:8000/docs` for interactive API docs, or:
+
+```bash
+curl http://localhost:8000/flags
+curl http://localhost:8000/score
+curl -X POST http://localhost:8000/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"flag_id": "<flag_id from /flags>", "verdict": "false_positive", "merchant_name": "Notion"}'
+```
+
+**Important**: use `flag_id` (not `event_id`) when calling `/feedback` — a
+single subscription can trigger more than one pattern (e.g. both
+`zombie_sub` and `silent_conversion`), so `flag_id` (`event_id__pattern`)
+is what's actually unique.
+
 
 ## Why rules + feedback loop + LLM (not any one alone)
 
