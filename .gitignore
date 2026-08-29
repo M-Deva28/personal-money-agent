@@ -1,0 +1,16 @@
+# Environment / secrets
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Generated at runtime -- not source, shouldn't be committed
+logs/audit_trail.json
+data/user_profile.json
+
+# OS noise
+.DS_Store
