@@ -12,6 +12,7 @@ from collections import defaultdict
 from detector import run_all_detectors
 from audit import log_decision, decide_action, clear_log
 from feedback import load_profile
+from scoring import compute_score
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -37,50 +38,25 @@ def main():
         log_decision(flag, action)
 
     # --- Scoring against planted ground truth ---
-    flagged_ids = {f["event_id"]: f["pattern"] for f in flags}
-    all_labeled_ids = set(truth_by_id.keys())
-
-    true_positives = sum(
-        1 for eid, pat in flagged_ids.items()
-        if truth_by_id.get(eid) == pat
-    )
-    false_positives = sum(
-        1 for eid, pat in flagged_ids.items()
-        if truth_by_id.get(eid, "clean") != pat
-    )
-    false_negatives = sum(
-        1 for eid, label in truth_by_id.items()
-        if label != "clean" and flagged_ids.get(eid) != label
-    )
-
-    precision = true_positives / (true_positives + false_positives) if flagged_ids else 0
-    recall = true_positives / (true_positives + false_negatives) if all_labeled_ids else 0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0
-
-    amount_flagged = sum(f["amount_at_stake"] for f in flags)
-    high_conf_amount = sum(f["amount_at_stake"] for f in flags if f["confidence"] == "high")
-
-    by_pattern = defaultdict(int)
-    for f in flags:
-        by_pattern[f["pattern"]] += 1
+    report = compute_score(flags, ground_truth)
 
     print("=" * 60)
     print("PERSONAL MONEY AGENT — DETECTION REPORT")
     print("=" * 60)
     print(f"Total events scanned      : {len(transactions) + len(subscriptions)}")
-    print(f"Total flags raised        : {len(flags)}")
+    print(f"Total flags raised        : {report['total_flags']}")
     print()
     print("Flags by pattern:")
-    for pattern, count in sorted(by_pattern.items()):
+    for pattern, count in sorted(report['flags_by_pattern'].items()):
         print(f"  - {pattern:22s}: {count}")
     print()
-    print(f"Precision                 : {precision:.2%}")
-    print(f"Recall                    : {recall:.2%}")
-    print(f"F1 score                  : {f1:.2%}")
+    print(f"Precision                 : {report['precision']:.2%}")
+    print(f"Recall                    : {report['recall']:.2%}")
+    print(f"F1 score                  : {report['f1']:.2%}")
     print()
-    print(f"Total ₹ flagged           : ₹{amount_flagged:,.2f}")
-    print(f"₹ auto-actionable (high)  : ₹{high_conf_amount:,.2f}")
-    print(f"₹ needs human review      : ₹{amount_flagged - high_conf_amount:,.2f}")
+    print(f"Total ₹ flagged           : ₹{report['total_amount_flagged']:,.2f}")
+    print(f"₹ auto-actionable (high)  : ₹{report['auto_actionable_amount']:,.2f}")
+    print(f"₹ needs human review      : ₹{report['needs_review_amount']:,.2f}")
     print()
     print(f"Audit trail written to logs/audit_trail.json ({len(flags)} entries)")
     print("=" * 60)
