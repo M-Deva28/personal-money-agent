@@ -233,12 +233,12 @@ function entryHTML(f) {
   `;
 }
 
-function extractMerchant(reasoning) {
-  return reasoning.split(/ subscription| charged| jumped| marked| payment/)[0];
+function extractMerchant(flag) {
+  return flag.merchant_name || flag.reasoning.split(/ subscription| charged| jumped| marked| payment/)[0];
 }
 
 async function handleFeedback(flag, verdict) {
-  const merchant = extractMerchant(flag.reasoning);
+  const merchant = extractMerchant(flag);
   const row = document.getElementById(`row-${flag.flag_id}`);
   row.querySelectorAll("button").forEach(b => b.disabled = true);
 

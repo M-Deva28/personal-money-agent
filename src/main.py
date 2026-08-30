@@ -10,6 +10,14 @@ import json
 import os
 import threading
 
+from dotenv import load_dotenv
+load_dotenv()  # BUG FIX: without this, RAZORPAY_KEY_ID / ANTHROPIC_API_KEY in
+                # .env were invisible to this process -- confirmed via a real
+                # test where execution_result showed "mode": "mocked" for
+                # refund_owed flags even after keys were correctly set,
+                # because load_dotenv() was only ever called in the standalone
+                # test scripts, never in the actual running server.
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
