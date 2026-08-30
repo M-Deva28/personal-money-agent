@@ -8,9 +8,11 @@ Docs: http://localhost:8000/docs  (FastAPI auto-generates this)
 
 import json
 import os
+import threading
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from detector import run_all_detectors
@@ -31,9 +33,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Cache of the last computed flags, keyed by event_id -- needed so /feedback
-# can look up the original flag when the user submits a verdict.
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
+app.mount("/dashboard", StaticFiles(directory=STATIC_DIR, html=True), name="dashboard")
+
+# Cache of the last computed flags. _flag_cache is keyed by flag_id for
+# /feedback lookups; _last_flags preserves the list so /score can reuse it
+# without re-running the pipeline (which would re-trigger clear_log() and
+# race with a concurrent /audit read of the same file).
 _flag_cache = {}
+_last_flags = []
+_pipeline_lock = threading.Lock()  # prevents concurrent runs from racing on audit_trail.json
 
 
 def _load(name):
@@ -42,24 +51,32 @@ def _load(name):
 
 
 def _run_pipeline():
-    """Single source of truth: load data, detect, review, log, cache."""
-    transactions = _load("transactions.json")
-    subscriptions = _load("subscriptions.json")
-    profile = load_profile()
+    """Single source of truth: load data, detect, review, log, cache.
 
-    flags = run_all_detectors(transactions, subscriptions, profile=profile)
-    flags = review_all_medium_confidence(flags)
+    Wrapped in a lock: two concurrent requests (e.g. a dashboard firing
+    /flags and /score at once, or two browser tabs) both hitting this
+    at the same time can otherwise race on reading/writing
+    audit_trail.json and corrupt it mid-write.
+    """
+    with _pipeline_lock:
+        transactions = _load("transactions.json")
+        subscriptions = _load("subscriptions.json")
+        profile = load_profile()
 
-    clear_log()
-    for flag in flags:
-        action = decide_action(flag)
-        log_decision(flag, action)
-        if action == "auto_executed":
-            flag["execution_result"] = execute_action(flag)
+        flags = run_all_detectors(transactions, subscriptions, profile=profile)
+        flags = review_all_medium_confidence(flags)
 
-    global _flag_cache
-    _flag_cache = {f["flag_id"]: f for f in flags}
-    return flags
+        clear_log()
+        for flag in flags:
+            action = decide_action(flag)
+            log_decision(flag, action)
+            if action == "auto_executed":
+                flag["execution_result"] = execute_action(flag)
+
+        global _flag_cache, _last_flags
+        _flag_cache = {f["flag_id"]: f for f in flags}
+        _last_flags = flags
+        return flags
 
 
 class FeedbackRequest(BaseModel):
@@ -72,6 +89,7 @@ class FeedbackRequest(BaseModel):
 def root():
     return {
         "service": "Personal Money Agent",
+        "dashboard": "/dashboard",
         "endpoints": ["/flags", "/feedback (POST)", "/audit", "/score"],
     }
 
@@ -113,6 +131,12 @@ def get_audit():
 
 @app.get("/score")
 def get_score():
+    """
+    Scores the MOST RECENT flags already computed by /flags -- does not
+    re-run the pipeline itself. Re-running here would call clear_log()
+    again and race with a concurrent /audit read of the same file.
+    Call GET /flags first (the dashboard always does).
+    """
     ground_truth = _load("ground_truth.json")
-    flags = _run_pipeline()
+    flags = _last_flags if _last_flags else _run_pipeline()
     return compute_score(flags, ground_truth)

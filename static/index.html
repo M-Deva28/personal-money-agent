@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Money Agent — Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EDE6D8;
+    --paper-alt: #E3D9C6;
+    --ink: #1F2A3C;
+    --ink-soft: #55617a;
+    --rule: #C9BFA9;
+    --stamp-green: #2F6F4E;
+    --stamp-red: #A8402F;
+    --stamp-blue: #33507D;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    background-image: repeating-linear-gradient(transparent, transparent 41px, var(--rule) 42px);
+    color: var(--ink);
+    font-family: 'Spectral', serif;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 28px 80px; }
+
+  header.masthead {
+    border-bottom: 3px double var(--ink);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .masthead h1 { font-size: 2rem; font-weight: 700; letter-spacing: 0.02em; margin: 0; }
+  .masthead .subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-soft); margin-top: 4px;
+  }
+  .masthead .acct { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--ink-soft); text-align: right; }
+
+  .balance-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-bottom: 36px;
+  }
+  .balance-cell { background: var(--paper-alt); padding: 14px 16px; }
+  .balance-cell .label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px;
+  }
+  .balance-cell .value { font-family: 'IBM Plex Mono', monospace; font-size: 1.25rem; font-weight: 600; }
+  .balance-cell .value.green { color: var(--stamp-green); }
+  .balance-cell .value.red { color: var(--stamp-red); }
+
+  .ledger-heading {
+    font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-soft); margin: 0 0 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .ledger-heading .count { font-family: 'IBM Plex Mono', monospace; font-weight: 400; }
+
+  .entry {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--ink-soft);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    position: relative;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .entry.high { border-left-color: var(--stamp-blue); }
+  .entry.medium { border-left-color: var(--stamp-red); }
+  .entry.resolved { opacity: 0.45; transform: scale(0.99); }
+
+  .entry-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .entry-pattern {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .entry-amount { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 1.05rem; white-space: nowrap; }
+  .entry-reasoning { font-style: italic; color: var(--ink); line-height: 1.5; margin: 0 0 12px; font-size: 0.98rem; }
+  .entry-llm { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--stamp-blue); margin: -6px 0 12px; }
+
+  .entry-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+  .stamp {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 10px; border: 2px solid currentColor; border-radius: 3px;
+    transform: rotate(-3deg); text-shadow: 0.5px 0.5px 0 currentColor;
+  }
+  .stamp.high { color: var(--stamp-blue); }
+  .stamp.medium { color: var(--stamp-red); }
+  .stamp.resolved { color: var(--stamp-green); transform: rotate(-2deg); }
+
+  .actions button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;
+    background: none; border: 1px solid var(--ink-soft); color: var(--ink);
+    padding: 7px 12px; margin-left: 8px; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .actions button:hover { background: var(--ink); color: var(--paper); }
+  .actions button:disabled { opacity: 0.35; cursor: default; }
+  .actions button:hover:disabled { background: none; color: var(--ink); }
+
+  .audit-toggle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase;
+    background: none; border: none;
+    border-top: 1px dashed var(--ink-soft); border-bottom: 1px dashed var(--ink-soft);
+    padding: 12px 0; width: 100%; text-align: left; cursor: pointer;
+    color: var(--ink-soft); margin-top: 30px;
+  }
+  #audit-panel {
+    display: none;
+    background: var(--ink); color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; line-height: 1.7;
+    padding: 20px; margin-top: 2px; max-height: 360px; overflow-y: auto; white-space: pre-wrap;
+  }
+  #audit-panel .row { border-bottom: 1px dotted rgba(237,230,216,0.25); padding: 6px 0; }
+
+  .loading, .empty { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--ink-soft); padding: 20px 0; }
+
+  @media (prefers-reduced-motion: reduce) { .entry { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <h1>Personal Money Agent</h1>
+      <div class="subtitle">Statement of Flagged Activity</div>
+    </div>
+    <div class="acct">ACCOUNT: DEMO-USER-001<br>AS OF: <span id="as-of-date">—</span></div>
+  </header>
+
+  <div class="balance-strip" id="balance-strip">
+    <div class="loading">Loading balances…</div>
+  </div>
+
+  <div class="ledger-heading">
+    <span>Flagged Entries</span>
+    <span class="count" id="entry-count">—</span>
+  </div>
+
+  <div id="ledger">
+    <div class="loading">Reading the ledger…</div>
+  </div>
+
+  <button class="audit-toggle" id="audit-toggle">▸ Show full audit trail</button>
+  <div id="audit-panel"></div>
+
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function loadEverything() {
+  // Sequenced, not parallel: /score relies on /flags having already
+  // populated the pipeline's cache. Firing both at once caused a real
+  // concurrency bug -- two threads writing audit_trail.json at the same
+  // time corrupted the file. Keep this sequential.
+  const flagsRes = await fetch(`${API}/flags`).then(r => r.json());
+  const scoreRes = await fetch(`${API}/score`).then(r => r.json());
+  renderBalances(scoreRes);
+  renderLedger(flagsRes.flags);
+  document.getElementById("as-of-date").textContent = new Date().toLocaleDateString();
+}
+
+function renderBalances(score) {
+  const strip = document.getElementById("balance-strip");
+  strip.innerHTML = `
+    <div class="balance-cell"><div class="label">Total Flagged</div><div class="value">₹${score.total_amount_flagged.toLocaleString()}</div></div>
+    <div class="balance-cell"><div class="label">Auto-Cleared</div><div class="value green">₹${score.auto_actionable_amount.toLocaleString()}</div></div>
+    <div class="balance-cell"><div class="label">Needs Review</div><div class="value red">₹${score.needs_review_amount.toLocaleString()}</div></div>
+    <div class="balance-cell"><div class="label">Precision</div><div class="value">${(score.precision*100).toFixed(0)}%</div></div>
+    <div class="balance-cell"><div class="label">Recall</div><div class="value">${(score.recall*100).toFixed(0)}%</div></div>
+  `;
+}
+
+function renderLedger(flags) {
+  const ledger = document.getElementById("ledger");
+  document.getElementById("entry-count").textContent = `${flags.length} entries`;
+
+  if (!flags.length) {
+    ledger.innerHTML = `<div class="empty">No flags raised — the ledger is clean.</div>`;
+    return;
+  }
+
+  ledger.innerHTML = flags.map(f => entryHTML(f)).join("");
+
+  flags.forEach(f => {
+    document.querySelectorAll(`[data-flag-id="${f.flag_id}"]`).forEach(btn => {
+      btn.addEventListener("click", (evt) => handleFeedback(f, evt.target.dataset.verdict));
+    });
+  });
+}
+
+function entryHTML(f) {
+  return `
+    <div class="entry ${f.confidence}" id="row-${f.flag_id}">
+      <div class="entry-top">
+        <span class="entry-pattern">${f.pattern.replace(/_/g, ' ')}</span>
+        <span class="entry-amount">₹${f.amount_at_stake.toLocaleString()}</span>
+      </div>
+      <p class="entry-reasoning">${f.reasoning}</p>
+      ${f.llm_explanation ? `<div class="entry-llm">↳ LLM review: ${f.llm_explanation}</div>` : ""}
+      <div class="entry-bottom">
+        <span class="stamp ${f.confidence}">${f.confidence === 'high' ? 'Auto-Cleared' : 'Needs Review'}</span>
+        <span class="actions">
+          <button data-flag-id="${f.flag_id}" data-verdict="confirmed">Confirm</button>
+          <button data-flag-id="${f.flag_id}" data-verdict="false_positive">False Alarm</button>
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function extractMerchant(reasoning) {
+  return reasoning.split(/ subscription| charged| jumped| marked| payment/)[0];
+}
+
+async function handleFeedback(flag, verdict) {
+  const merchant = extractMerchant(flag.reasoning);
+  const row = document.getElementById(`row-${flag.flag_id}`);
+  row.querySelectorAll("button").forEach(b => b.disabled = true);
+
+  await fetch(`${API}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ flag_id: flag.flag_id, verdict: verdict, merchant_name: merchant }),
+  }).catch(() => {});
+
+  row.classList.add("resolved");
+  const stampEl = row.querySelector(".stamp");
+  stampEl.textContent = "Corrected";
+  stampEl.className = "stamp resolved";
+
+  setTimeout(loadEverything, 900); // refresh the whole ledger to show the learned effect
+}
+
+document.getElementById("audit-toggle").addEventListener("click", async () => {
+  const panel = document.getElementById("audit-panel");
+  const toggle = document.getElementById("audit-toggle");
+  if (panel.style.display === "block") {
+    panel.style.display = "none";
+    toggle.textContent = "▸ Show full audit trail";
+    return;
+  }
+  const data = await fetch(`${API}/audit`).then(r => r.json());
+  panel.innerHTML = data.trail.length
+    ? data.trail.map(e => `<div class="row">[${e.logged_at}] ${e.pattern.toUpperCase()} → ${e.action_taken} — ${e.reasoning}</div>`).join("")
+    : "No audit entries yet.";
+  panel.style.display = "block";
+  toggle.textContent = "▾ Hide full audit trail";
+});
+
+loadEverything();
+</script>
+</body>
+</html>

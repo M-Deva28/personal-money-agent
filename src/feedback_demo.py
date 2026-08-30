@@ -58,7 +58,7 @@ def main():
     flags_after = run_all_detectors(transactions, subscriptions, profile=load_profile())
     zombie_flags_after = [f for f in flags_after if f["pattern"] == "zombie_sub"]
 
-    still_flagged = any(f["event_id"] == target["event_id"] for f in zombie_flags_after)
+    still_flagged = any(f["flag_id"] == target["flag_id"] for f in zombie_flags_after)
     print(f"  {merchant} still flagged after correction? {'YES — bug!' if still_flagged else 'NO — agent learned.'}")
     print(f"  Total zombie_sub flags: {len(zombie_flags)} -> {len(zombie_flags_after)}")
     print()

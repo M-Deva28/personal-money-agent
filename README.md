@@ -7,7 +7,7 @@ transactions and subscriptions, flags waste/fraud/forgotten refunds, and
 takes bounded, explainable action — with every decision logged to an
 audit trail.
 
-## Status: Day 2 — FastAPI service working end-to-end ✅
+## Status: Day 2 — dashboard live, real bug found & fixed under testing ✅
 
 - [x] Synthetic dataset with planted, labeled patterns (`data/`)
 - [x] Rule-based detection engine — 6 patterns, confidence-gated (`src/detector.py`)
@@ -17,12 +17,26 @@ audit trail.
 - [x] LLM layer — reviews medium-confidence flags only, degrades gracefully without API key (`src/llm_reasoner.py`)
 - [x] Razorpay test-mode action executor — mocks gracefully without keys (`src/razorpay_actions.py`)
 - [x] FastAPI service — `/flags`, `/feedback`, `/audit`, `/score` all tested live (`src/main.py`)
-- [ ] Simple dashboard UI on top of the API (Day 2-3)
+- [x] Passbook-style dashboard — live at `/dashboard`, feedback loop demoable by clicking a button (`static/index.html`)
 - [ ] Real Razorpay test-mode keys wired in (Day 3-4)
 - [ ] Finance mode: spend categorization + forecast (Day 5)
 - [ ] Growth mode: one scripted example (Day 6)
 - [ ] End-to-end run + final metrics (Day 7)
 - [ ] Repo polish + pitch video (Day 8)
+
+## View the dashboard
+
+```bash
+cd src
+uvicorn main:app --reload --port 8000
+```
+
+Then open `http://localhost:8000/dashboard/` in your browser. Click
+**Confirm** or **False Alarm** on any row — the ledger and the balance
+strip at the top update live, without a page reload. This is the core
+demo moment for the pitch video: it proves the feedback loop is real,
+not just numbers in a terminal.
+
 
 ## Run the API
 

@@ -220,4 +220,11 @@ def run_all_detectors(transactions, subscriptions, as_of=None, profile=None):
     flags += detect_price_hikes(transactions, profile)
     flags += detect_refund_owed(transactions, as_of=as_of, profile=profile)
     flags += detect_suspicious_collect(transactions, profile)
+
+    # A single underlying entity (e.g. one subscription) can trigger more
+    # than one pattern -- event_id alone isn't a unique key across flags.
+    # flag_id is what callers (API, feedback, audit) should reference.
+    for f in flags:
+        f["flag_id"] = f"{f['event_id']}__{f['pattern']}"
+
     return flags
