@@ -125,6 +125,14 @@ def submit_feedback(req: FeedbackRequest):
         raise HTTPException(status_code=400, detail="verdict must be 'confirmed' or 'false_positive'")
 
     updated_profile = record_feedback(flag, req.verdict, merchant_name=req.merchant_name)
+
+    # Refresh the cache immediately so a direct /score call (without an
+    # intervening /flags call) reflects this correction right away. The
+    # dashboard always calls /flags before /score anyway, but the raw
+    # API shouldn't silently serve stale results to someone testing it
+    # directly -- caught this during a full verification pass.
+    _run_pipeline()
+
     return {"status": "recorded", "updated_profile": updated_profile}
 
 
