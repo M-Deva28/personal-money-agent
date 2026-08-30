@@ -107,6 +107,7 @@
   .stamp.high { color: var(--stamp-blue); }
   .stamp.medium { color: var(--stamp-red); }
   .stamp.resolved { color: var(--stamp-green); transform: rotate(-2deg); }
+  .stamp.confirmed-stamp { color: var(--stamp-green); transform: rotate(-2deg); }
 
   .actions button {
     font-family: 'IBM Plex Mono', monospace;
@@ -171,6 +172,7 @@
 
 <script>
 const API = "http://127.0.0.1:8000";
+const confirmedFlagIds = new Set(); // persists across reloads within this session
 
 async function loadEverything() {
   // Sequenced, not parallel: /score relies on /flags having already
@@ -214,8 +216,9 @@ function renderLedger(flags) {
 }
 
 function entryHTML(f) {
+  const isConfirmed = confirmedFlagIds.has(f.flag_id);
   return `
-    <div class="entry ${f.confidence}" id="row-${f.flag_id}">
+    <div class="entry ${f.confidence} ${isConfirmed ? 'resolved' : ''}" id="row-${f.flag_id}">
       <div class="entry-top">
         <span class="entry-pattern">${f.pattern.replace(/_/g, ' ')}</span>
         <span class="entry-amount">₹${f.amount_at_stake.toLocaleString()}</span>
@@ -223,10 +226,10 @@ function entryHTML(f) {
       <p class="entry-reasoning">${f.reasoning}</p>
       ${f.llm_explanation ? `<div class="entry-llm">↳ LLM review: ${f.llm_explanation}</div>` : ""}
       <div class="entry-bottom">
-        <span class="stamp ${f.confidence}">${f.confidence === 'high' ? 'Auto-Cleared' : 'Needs Review'}</span>
+        <span class="stamp ${isConfirmed ? 'confirmed-stamp' : f.confidence}">${isConfirmed ? 'Confirmed ✓' : (f.confidence === 'high' ? 'Auto-Cleared' : 'Needs Review')}</span>
         <span class="actions">
-          <button data-flag-id="${f.flag_id}" data-verdict="confirmed">Confirm</button>
-          <button data-flag-id="${f.flag_id}" data-verdict="false_positive">False Alarm</button>
+          <button data-flag-id="${f.flag_id}" data-verdict="confirmed" ${isConfirmed ? 'disabled' : ''}>Confirm</button>
+          <button data-flag-id="${f.flag_id}" data-verdict="false_positive" ${isConfirmed ? 'disabled' : ''}>False Alarm</button>
         </span>
       </div>
     </div>
@@ -248,10 +251,19 @@ async function handleFeedback(flag, verdict) {
     body: JSON.stringify({ flag_id: flag.flag_id, verdict: verdict, merchant_name: merchant }),
   }).catch(() => {});
 
+  if (verdict === "confirmed") {
+    confirmedFlagIds.add(flag.flag_id); // remembered across the next re-render
+  }
+
   row.classList.add("resolved");
   const stampEl = row.querySelector(".stamp");
-  stampEl.textContent = "Corrected";
-  stampEl.className = "stamp resolved";
+  if (verdict === "confirmed") {
+    stampEl.textContent = "Confirmed ✓";
+    stampEl.className = "stamp confirmed-stamp";
+  } else {
+    stampEl.textContent = "Corrected";
+    stampEl.className = "stamp resolved";
+  }
 
   setTimeout(loadEverything, 900); // refresh the whole ledger to show the learned effect
 }
