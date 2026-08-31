@@ -73,6 +73,58 @@
   }
   .ledger-heading .count { font-family: 'IBM Plex Mono', monospace; font-weight: 400; }
 
+  /* ---------- Finance section ---------- */
+  .finance-section { margin-top: 40px; }
+  .finance-note {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    margin: -8px 0 16px;
+  }
+  .cat-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .cat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: 110px;
+    flex-shrink: 0;
+    color: var(--ink-soft);
+  }
+  .cat-bar-track {
+    flex: 1;
+    height: 14px;
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+  }
+  .cat-bar-fill {
+    height: 100%;
+    background: var(--stamp-blue);
+    opacity: 0.75;
+  }
+  .cat-amount {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    width: 90px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .forecast-strip {
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+  }
+  .forecast-strip .big { font-size: 1.15rem; font-weight: 600; color: var(--stamp-blue); }
+
   .entry {
     background: rgba(255,255,255,0.35);
     border: 1px solid var(--rule);
@@ -168,6 +220,16 @@
   <button class="audit-toggle" id="audit-toggle">▸ Show full audit trail</button>
   <div id="audit-panel"></div>
 
+  <div class="finance-section">
+    <div class="ledger-heading">
+      <span>Spend by Category</span>
+      <span class="count" id="finance-count">—</span>
+    </div>
+    <div class="finance-note">Categorized by known merchant lookup — not a trained model. Forecast is a plain moving average.</div>
+    <div id="category-breakdown"></div>
+    <div class="forecast-strip" id="forecast-strip"></div>
+  </div>
+
 </div>
 
 <script>
@@ -181,9 +243,32 @@ async function loadEverything() {
   // time corrupted the file. Keep this sequential.
   const flagsRes = await fetch(`${API}/flags`).then(r => r.json());
   const scoreRes = await fetch(`${API}/score`).then(r => r.json());
+  const financeRes = await fetch(`${API}/finance`).then(r => r.json());
   renderBalances(scoreRes);
   renderLedger(flagsRes.flags);
+  renderFinance(financeRes);
   document.getElementById("as-of-date").textContent = new Date().toLocaleDateString();
+}
+
+function renderFinance(finance) {
+  const totals = finance.category_totals;
+  const maxAmount = Math.max(...Object.values(totals));
+  const container = document.getElementById("category-breakdown");
+  document.getElementById("finance-count").textContent = `${Object.keys(totals).length} categories`;
+
+  container.innerHTML = Object.entries(totals).map(([cat, amt]) => `
+    <div class="cat-row">
+      <span class="cat-label">${cat}</span>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(amt / maxAmount * 100).toFixed(1)}%"></div></div>
+      <span class="cat-amount">₹${amt.toLocaleString()}</span>
+    </div>
+  `).join("");
+
+  const f = finance.forecast;
+  document.getElementById("forecast-strip").innerHTML = `
+    Next-month forecast (${f.method}, based on ${f.based_on_months.join(", ")}):
+    <span class="big">₹${f.forecast_total.toLocaleString()}</span>
+  `;
 }
 
 function renderBalances(score) {

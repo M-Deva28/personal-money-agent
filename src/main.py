@@ -29,6 +29,7 @@ from audit import log_decision, decide_action, clear_log
 from scoring import compute_score
 from llm_reasoner import review_all_medium_confidence
 from razorpay_actions import execute_action
+from finance import finance_summary
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -156,3 +157,15 @@ def get_score():
     ground_truth = _load("ground_truth.json")
     flags = _last_flags if _last_flags else _run_pipeline()
     return compute_score(flags, ground_truth)
+
+
+@app.get("/finance")
+def get_finance():
+    """
+    Spend categorization + a simple moving-average forecast. Explicitly
+    NOT machine learning -- categorization is a lookup against known
+    merchants (the right tool for a finite personal merchant list), and
+    the forecast is a plain statistical projection. Labeled as such
+    rather than oversold as AI.
+    """
+    return finance_summary()
