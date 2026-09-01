@@ -9,7 +9,6 @@ Docs: http://localhost:8000/docs  (FastAPI auto-generates this)
 import json
 import os
 import threading
-from datetime import datetime
 
 from dotenv import load_dotenv
 load_dotenv()  # BUG FIX: without this, RAZORPAY_KEY_ID / ANTHROPIC_API_KEY in
@@ -32,7 +31,6 @@ from llm_reasoner import review_all_medium_confidence
 from razorpay_actions import execute_action
 from finance import finance_summary
 from growth import growth_summary
-from reminders import detect_upcoming_bills
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -195,18 +193,3 @@ def set_autopay(req: AutopayRequest):
     from feedback import set_autopay as _set_autopay
     updated_profile = _set_autopay(req.merchant_name, req.enabled)
     return {"status": "recorded", "autopay_enabled_merchants": updated_profile["autopay_enabled_merchants"]}
-
-
-@app.get("/reminders")
-def get_reminders():
-    """
-    Growth mode: upcoming bill reminders. Deliberately separate from
-    /flags -- these aren't risk/waste detections, just a heads-up on
-    money that's about to move correctly. Never auto-pays; surfacing
-    only, by design (see reminders.py for the reasoning).
-    """
-    transactions = _load("transactions.json")
-    subscriptions = _load("subscriptions.json")
-    as_of = max(datetime.fromisoformat(t["timestamp"]) for t in transactions)
-    reminders = detect_upcoming_bills(subscriptions, as_of=as_of, days_ahead=14)
-    return {"count": len(reminders), "reminders": reminders}
