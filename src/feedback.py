@@ -23,6 +23,7 @@ DEFAULT_PROFILE = {
     "refund_grace_days": 10,
     "duplicate_window_minutes": 10,
     "trusted_merchants_extra": [],       # merchants the user has confirmed are fine
+    "autopay_enabled_merchants": [],     # merchants the user has opted into bill autopay for
     "feedback_log": [],
 }
 
@@ -100,3 +101,20 @@ def record_feedback(flag, verdict, merchant_name=None):
 def reset_profile():
     if os.path.exists(PROFILE_PATH):
         os.remove(PROFILE_PATH)
+
+
+def set_autopay(merchant_name, enabled):
+    """
+    Toggles bill autopay for a specific merchant. This is an explicit,
+    per-merchant opt-in -- the agent never auto-pays a merchant the user
+    hasn't specifically enabled it for, even for known/trusted merchants.
+    """
+    profile = load_profile()
+    current = set(profile.get("autopay_enabled_merchants", []))
+    if enabled:
+        current.add(merchant_name)
+    else:
+        current.discard(merchant_name)
+    profile["autopay_enabled_merchants"] = sorted(current)
+    save_profile(profile)
+    return profile

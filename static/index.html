@@ -125,6 +125,31 @@
   }
   .forecast-strip .big { font-size: 1.15rem; font-weight: 600; color: var(--stamp-blue); }
 
+  /* ---------- Growth / bills section ---------- */
+  .bill-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--stamp-red);
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.35);
+  }
+  .bill-row.upcoming { border-left-color: var(--stamp-blue); }
+  .bill-row.autopay-on { border-left-color: var(--stamp-green); }
+  .bill-info { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+  .bill-merchant { font-weight: 600; }
+  .bill-due { color: var(--ink-soft); margin-left: 8px; }
+  .bill-amount { font-weight: 600; margin-right: 14px; }
+  .autopay-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase;
+    background: none; border: 1px solid var(--ink-soft); color: var(--ink);
+    padding: 6px 10px; cursor: pointer;
+  }
+  .autopay-btn.on { background: var(--stamp-green); color: var(--paper); border-color: var(--stamp-green); }
+
   .entry {
     background: rgba(255,255,255,0.35);
     border: 1px solid var(--rule);
@@ -222,6 +247,15 @@
 
   <div class="finance-section">
     <div class="ledger-heading">
+      <span>Upcoming &amp; Overdue Bills</span>
+      <span class="count" id="growth-count">—</span>
+    </div>
+    <div class="finance-note">Never auto-pays unless you enable autopay for that merchant. Everything else is a reminder only.</div>
+    <div id="bills-list"></div>
+  </div>
+
+  <div class="finance-section">
+    <div class="ledger-heading">
       <span>Spend by Category</span>
       <span class="count" id="finance-count">—</span>
     </div>
@@ -244,10 +278,57 @@ async function loadEverything() {
   const flagsRes = await fetch(`${API}/flags`).then(r => r.json());
   const scoreRes = await fetch(`${API}/score`).then(r => r.json());
   const financeRes = await fetch(`${API}/finance`).then(r => r.json());
+  const growthRes = await fetch(`${API}/growth`).then(r => r.json());
   renderBalances(scoreRes);
   renderLedger(flagsRes.flags);
   renderFinance(financeRes);
+  renderGrowth(growthRes);
   document.getElementById("as-of-date").textContent = new Date().toLocaleDateString();
+}
+
+function renderGrowth(growth) {
+  document.getElementById("growth-count").textContent = `${growth.count} bills`;
+  const container = document.getElementById("bills-list");
+
+  if (!growth.count) {
+    container.innerHTML = `<div class="empty">No bills due soon.</div>`;
+    return;
+  }
+
+  container.innerHTML = growth.bills.map(b => {
+    const statusText = b.overdue
+      ? `overdue by ${Math.abs(b.days_until_due)}d`
+      : `due in ${b.days_until_due}d`;
+    const rowClass = b.autopay_enabled ? 'autopay-on' : (b.overdue ? '' : 'upcoming');
+    return `
+      <div class="bill-row ${rowClass}">
+        <div class="bill-info">
+          <span class="bill-merchant">${b.merchant_name}</span>
+          <span class="bill-due">${statusText}</span>
+        </div>
+        <div>
+          <span class="bill-amount">₹${b.amount.toLocaleString()}</span>
+          <button class="autopay-btn ${b.autopay_enabled ? 'on' : ''}" data-merchant="${b.merchant_name}" data-enabled="${!b.autopay_enabled}">
+            ${b.autopay_enabled ? 'Autopay ON' : 'Enable Autopay'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".autopay-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const merchant = btn.dataset.merchant;
+      const enabled = btn.dataset.enabled === "true";
+      btn.disabled = true;
+      await fetch(`${API}/growth/autopay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ merchant_name: merchant, enabled: enabled }),
+      }).catch(() => {});
+      loadEverything();
+    });
+  });
 }
 
 function renderFinance(finance) {

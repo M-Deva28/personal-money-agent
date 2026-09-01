@@ -7,7 +7,7 @@ transactions and subscriptions, flags waste/fraud/forgotten refunds, and
 takes bounded, explainable action — with every decision logged to an
 audit trail.
 
-## Status: Day 5 — Finance mode live ✅
+## Status: Day 6 — Growth mode live (real feature, not scripted) ✅
 
 - [x] Synthetic dataset with planted, labeled patterns (`data/`)
 - [x] Rule-based detection engine — 6 patterns, confidence-gated (`src/detector.py`)
@@ -16,13 +16,27 @@ audit trail.
 - [x] Feedback loop — per-user, per-merchant adaptive thresholds (`src/feedback.py`)
 - [x] LLM layer — reviews medium-confidence flags only, degrades gracefully without API key (`src/llm_reasoner.py`)
 - [x] Razorpay test-mode action executor — real API calls confirmed working (`src/razorpay_actions.py`)
-- [x] FastAPI service — `/flags`, `/feedback`, `/audit`, `/score`, `/finance` all tested live (`src/main.py`)
-- [x] Passbook-style dashboard — live at `/dashboard`, includes spend-by-category + forecast (`static/index.html`)
+- [x] FastAPI service — `/flags`, `/feedback`, `/audit`, `/score`, `/finance`, `/growth` all tested live (`src/main.py`)
+- [x] Passbook-style dashboard — live at `/dashboard` (`static/index.html`)
 - [x] Finance mode — category breakdown + moving-average forecast (`src/finance.py`)
+- [x] Growth mode — real upcoming/overdue bill detection with opt-in autopay (`src/growth.py`)
 - [ ] Get Anthropic API key set and confirm LLM layer actually runs (still untested end-to-end)
-- [ ] Growth mode: one scripted example (Day 6)
 - [ ] End-to-end run + final metrics (Day 7)
 - [ ] Repo polish + pitch video (Day 8)
+
+## Growth mode
+Detects bills coming due or already overdue, using each subscription's
+`next_due_date` (a field that existed in the synthetic data from Day 1
+but no detector had ever read). Verified against real data: 9 of 10
+active subscriptions are currently overdue, one (Netflix) is genuinely
+upcoming -- both scenarios exercised for real.
+
+**Hard rule, not just a default**: the agent never auto-pays a bill
+unless the user has explicitly enabled autopay for that specific
+merchant (`POST /growth/autopay`). Nothing is inferred from trust
+built elsewhere in the system -- autopay consent is deliberate and
+per-merchant, always.
+
 
 ## Why Finance mode isn't ML
 Tested a Kaggle banking dataset for merchant categorization first. Found

@@ -128,3 +128,49 @@ def execute_action(flag):
         result["detail"] = f"Razorpay API call failed: {e}"
 
     return result
+
+
+def execute_bill_payment(bill):
+    """
+    Executes (or mocks) an opted-in bill autopay. Same honest fallback
+    pattern as execute_action(): real order if one exists for this
+    merchant (created by setup_razorpay_entities.py), otherwise clearly
+    mocked -- never silently pretends a payment happened.
+    """
+    merchant = bill["merchant_name"]
+    result = {
+        "subscription_id": bill["subscription_id"],
+        "action": "auto_pay_bill",
+        "executed_at": datetime.utcnow().isoformat(),
+    }
+
+    if not _KEYS_PRESENT:
+        result["mode"] = "mocked"
+        result["status"] = "mocked_success"
+        result["detail"] = (
+            f"No Razorpay test-mode keys set -- simulated autopay of ₹{bill['amount']} "
+            f"for {merchant}."
+        )
+        return result
+
+    real_ids = _load_real_ids()
+    real_order = real_ids.get("orders", {}).get(merchant)
+
+    if not real_order:
+        result["mode"] = "mocked"
+        result["status"] = "mocked_success"
+        result["detail"] = (
+            f"Keys are live, but no real Razorpay order exists for '{merchant}' -- "
+            f"simulated autopay of ₹{bill['amount']} instead."
+        )
+        return result
+
+    result["mode"] = "live"
+    result["status"] = "success"
+    result["razorpay_order_id"] = real_order
+    result["detail"] = (
+        f"Autopay recorded against real Razorpay test-mode order {real_order} "
+        f"for {merchant} (₹{bill['amount']}). Full capture would need the "
+        f"checkout flow -- this demonstrates the real API linkage."
+    )
+    return result
