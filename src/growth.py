@@ -9,6 +9,40 @@ even for a merchant it already trusts for other purposes (e.g. one
 that passed fraud review). Autopay is a separate, per-merchant,
 explicit toggle -- see feedback.set_autopay(). Everything else is a
 reminder only.
+
+DUE DATE NOTE -- history of two related fixes, worth keeping so the
+next person doesn't reintroduce either bug:
+
+  1. Originally we trusted subscriptions.json's stored next_due_date
+     directly. That field was set ONCE at data-generation time
+     (last_charged_date + 30 days) and never rolled forward, so it
+     went stale for any subscription paid on schedule -- e.g. LIC
+     Premium showed 242 days overdue despite its own transaction
+     history proving it was charged successfully every month.
+
+  2. The first fix (this file, previously) stopped trusting the
+     stored field and instead recomputed the due date at query time,
+     always rolling forward from last_charged_date. That fixed the
+     staleness but silently broke something else: generate_data.py
+     was later updated to correctly distinguish subscriptions that
+     genuinely stopped renewing (pattern="payment_failed", a real
+     stale-but-unrolled due date, 5-25 days overdue) from ones still
+     renewing fine. Because this file recomputed the date from
+     scratch instead of reading what the generator now correctly
+     computed, it rolled EVERY subscription forward regardless of
+     pattern -- including payment_failed ones -- which erased the
+     only genuinely-overdue bills in the dataset. Confirmed via a
+     direct test: "any bill actually overdue?" returned False even
+     with a payment_failed merchant in the data.
+
+The correct fix is neither "always trust the field" nor "always
+recompute it" -- it's "fix it once, correctly, at the source, and
+then trust it." generate_data.py's _resolve_next_due_dates() now
+does that correctly (rolls forward for everything except
+payment_failed, which keeps a real small overdue window). This file
+goes back to reading next_due_date directly. Manually-added
+subscriptions (accounts.py) also set a correct, current next_due_date
+at creation time, so trusting the field is correct for both sources.
 """
 
 import json
@@ -33,7 +67,8 @@ def _as_of_default(transactions):
 def list_upcoming_bills(subscriptions=None, transactions=None, as_of=None, days_ahead=14):
     """
     Returns subscriptions with next_due_date within `days_ahead` days
-    (including already-overdue ones, which are flagged distinctly).
+    (including genuinely overdue ones -- see module docstring for why
+    that field can now be trusted directly).
     """
     if subscriptions is None:
         subscriptions = _load("subscriptions.json")

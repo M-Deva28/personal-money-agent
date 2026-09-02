@@ -20,6 +20,7 @@ audit trail.
 - [x] Passbook-style dashboard — live at `/dashboard` (`static/index.html`)
 - [x] Finance mode — category breakdown + moving-average forecast (`src/finance.py`)
 - [x] Growth mode — real upcoming/overdue bill detection with opt-in autopay (`src/growth.py`)
+- [x] Tabbed dashboard with login gate, mock Account Aggregator connect flow, and manual transaction/subscription entry (`static/index.html`, `src/accounts.py`)
 - [ ] Get Anthropic API key set and confirm LLM layer actually runs (still untested end-to-end)
 - [ ] End-to-end run + final metrics (Day 7)
 - [ ] Repo polish + pitch video (Day 8)
@@ -37,6 +38,29 @@ merchant (`POST /growth/autopay`). Nothing is inferred from trust
 built elsewhere in the system -- autopay consent is deliberate and
 per-merchant, always.
 
+
+## Account connection & manual entry
+The dashboard now has a login gate, an "Accounts" tab, and a tab/section
+layout instead of one long scroll. Two honest things worth saying about
+this, the same way Finance mode's limitations are stated above rather
+than glossed over:
+
+- **Login is a demo gate, not real auth.** `POST /auth/login` accepts
+  any non-empty username/password and issues no token — it exists so
+  the pitch can show an account-scoped agent, not to secure anything.
+- **"Connect account" simulates the Account Aggregator (AA) consent
+  flow**, not a real bank link. Picking a provider in the Accounts tab
+  calls `POST /accounts/connect`, which records a mock consent artifact
+  (scope, provider, timestamp) — no credentials are collected, which is
+  the actual point of the AA model (Setu/Finvu/OneMoney/Anumati) this
+  mirrors. A production build would swap this for a real AA SDK
+  integration feeding the same `transactions.json`/`subscriptions.json`
+  shape.
+- **Manual entry is real, not mocked.** `POST /transactions/manual` and
+  `POST /subscriptions/manual` (`src/accounts.py`) append directly to
+  the same data files the detector reads, so a hand-entered transaction
+  or subscription flows through detection, scoring, finance, and bills
+  exactly like generated data does.
 
 ## Why Finance mode isn't ML
 Tested a Kaggle banking dataset for merchant categorization first. Found

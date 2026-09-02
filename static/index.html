@@ -48,6 +48,99 @@
     color: var(--ink-soft); margin-top: 4px;
   }
   .masthead .acct { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--ink-soft); text-align: right; }
+  .masthead .acct .logout-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.05em; text-transform: uppercase;
+    background: none; border: 1px solid var(--ink-soft); color: var(--ink-soft);
+    padding: 4px 8px; cursor: pointer; margin-top: 6px;
+  }
+  .masthead .acct .logout-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  /* ---------- Login gate ---------- */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-card {
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+    border-top: 3px double var(--ink);
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 340px;
+  }
+  .login-card h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .login-card .subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-soft); margin-bottom: 24px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-soft); margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    font-family: 'Spectral', serif;
+    font-size: 0.95rem;
+    padding: 9px 10px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+  }
+  .field input:focus, .field select:focus { outline: 1px solid var(--stamp-blue); }
+  .primary-btn {
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--ink); color: var(--paper);
+    border: none; padding: 12px; cursor: pointer; margin-top: 6px;
+  }
+  .primary-btn:hover { background: var(--stamp-blue); }
+  .primary-btn:disabled { opacity: 0.5; cursor: default; }
+  .login-error {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    color: var(--stamp-red); margin-top: 10px; display: none;
+  }
+  .login-note {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+    color: var(--ink-soft); margin-top: 18px; line-height: 1.5;
+  }
+
+  /* ---------- Tabs ---------- */
+  #app { display: none; }
+  .tab-nav {
+    display: flex;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 28px;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
+    background: none; border: 1px solid var(--rule); border-bottom: none;
+    color: var(--ink-soft); padding: 10px 18px; cursor: pointer;
+    position: relative; top: 2px;
+  }
+  .tab-btn.active {
+    color: var(--ink); background: var(--paper);
+    border-color: var(--ink); border-bottom: 2px solid var(--paper);
+    font-weight: 600;
+  }
+  .tab-btn .badge {
+    display: inline-block; margin-left: 6px;
+    background: var(--stamp-red); color: var(--paper);
+    font-size: 0.6rem; padding: 1px 5px; border-radius: 8px;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
   .balance-strip {
     display: grid;
@@ -75,6 +168,7 @@
 
   /* ---------- Finance section ---------- */
   .finance-section { margin-top: 40px; }
+  .finance-section:first-child { margin-top: 0; }
   .finance-note {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
@@ -215,10 +309,80 @@
 
   .loading, .empty { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--ink-soft); padding: 20px 0; }
 
+  /* ---------- Accounts tab ---------- */
+  .provider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .provider-card {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid var(--rule);
+    padding: 14px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .provider-card:hover { border-color: var(--stamp-blue); }
+  .provider-card.connected { border-color: var(--stamp-green); border-left-width: 4px; cursor: default; }
+  .provider-card .p-name { font-weight: 600; font-size: 0.95rem; }
+  .provider-card .p-via {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+    color: var(--ink-soft); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .provider-card .p-status {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+    color: var(--stamp-green); margin-top: 8px; text-transform: uppercase;
+  }
+  .consent-note {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    color: var(--ink-soft); line-height: 1.6; margin-bottom: 20px;
+    padding: 12px 14px; background: var(--paper-alt); border: 1px solid var(--rule);
+  }
+  .manual-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 8px; }
+  @media (max-width: 700px) { .manual-forms { grid-template-columns: 1fr; } }
+  .manual-form-card {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid var(--rule);
+    padding: 18px;
+  }
+  .manual-form-card h3 {
+    font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;
+    margin: 0 0 14px; color: var(--ink-soft);
+  }
+  .manual-form-card .primary-btn { width: auto; padding: 9px 16px; font-size: 0.68rem; }
+  .form-msg {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    margin-top: 10px; display: none;
+  }
+  .form-msg.ok { color: var(--stamp-green); display: block; }
+  .form-msg.err { color: var(--stamp-red); display: block; }
+
   @media (prefers-reduced-motion: reduce) { .entry { transition: none; } }
 </style>
 </head>
 <body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <h1>Personal Money Agent</h1>
+    <div class="subtitle">Sign in to your ledger</div>
+    <div class="field">
+      <label for="login-username">Username</label>
+      <input type="text" id="login-username" placeholder="demo-user" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="primary-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error">Enter a username and password.</div>
+    <div class="login-note">Demo gate only — any username/password combination works. No real authentication is performed; this is here to demonstrate the account-scoped flow for the pitch.</div>
+  </div>
+</div>
+
+<div id="app">
 <div class="wrap">
 
   <header class="masthead">
@@ -226,50 +390,179 @@
       <h1>Personal Money Agent</h1>
       <div class="subtitle">Statement of Flagged Activity</div>
     </div>
-    <div class="acct">ACCOUNT: DEMO-USER-001<br>AS OF: <span id="as-of-date">—</span></div>
+    <div class="acct">
+      ACCOUNT: <span id="acct-username">DEMO-USER-001</span><br>
+      AS OF: <span id="as-of-date">—</span><br>
+      <button class="logout-btn" id="logout-btn">Sign Out</button>
+    </div>
   </header>
 
-  <div class="balance-strip" id="balance-strip">
-    <div class="loading">Loading balances…</div>
-  </div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="ledger">Ledger</button>
+    <button class="tab-btn" data-tab="bills">Bills <span class="badge" id="bills-badge" style="display:none"></span></button>
+    <button class="tab-btn" data-tab="finance">Finance</button>
+    <button class="tab-btn" data-tab="accounts">Accounts</button>
+  </nav>
 
-  <div class="ledger-heading">
-    <span>Flagged Entries</span>
-    <span class="count" id="entry-count">—</span>
-  </div>
-
-  <div id="ledger">
-    <div class="loading">Reading the ledger…</div>
-  </div>
-
-  <button class="audit-toggle" id="audit-toggle">▸ Show full audit trail</button>
-  <div id="audit-panel"></div>
-
-  <div class="finance-section">
-    <div class="ledger-heading">
-      <span>Upcoming &amp; Overdue Bills</span>
-      <span class="count" id="growth-count">—</span>
+  <!-- ===== Ledger tab ===== -->
+  <section class="tab-panel active" id="tab-ledger">
+    <div class="balance-strip" id="balance-strip">
+      <div class="loading">Loading balances…</div>
     </div>
-    <div class="finance-note">Never auto-pays unless you enable autopay for that merchant. Everything else is a reminder only.</div>
-    <div id="bills-list"></div>
-  </div>
 
-  <div class="finance-section">
     <div class="ledger-heading">
-      <span>Spend by Category</span>
-      <span class="count" id="finance-count">—</span>
+      <span>Flagged Entries</span>
+      <span class="count" id="entry-count">—</span>
     </div>
-    <div class="finance-note">Categorized by known merchant lookup — not a trained model. Forecast is a plain moving average.</div>
-    <div id="category-breakdown"></div>
-    <div class="forecast-strip" id="forecast-strip"></div>
-  </div>
 
+    <div id="ledger">
+      <div class="loading">Reading the ledger…</div>
+    </div>
+
+    <button class="audit-toggle" id="audit-toggle">▸ Show full audit trail</button>
+    <div id="audit-panel"></div>
+  </section>
+
+  <!-- ===== Bills tab ===== -->
+  <section class="tab-panel" id="tab-bills">
+    <div class="finance-section" style="margin-top:0">
+      <div class="ledger-heading">
+        <span>Upcoming &amp; Overdue Bills</span>
+        <span class="count" id="growth-count">—</span>
+      </div>
+      <div class="finance-note">Never auto-pays unless you enable autopay for that merchant. Everything else is a reminder only.</div>
+      <div id="bills-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== Finance tab ===== -->
+  <section class="tab-panel" id="tab-finance">
+    <div class="finance-section" style="margin-top:0">
+      <div class="ledger-heading">
+        <span>Spend by Category</span>
+        <span class="count" id="finance-count">—</span>
+      </div>
+      <div class="finance-note">Categorized by known merchant lookup — not a trained model. Forecast is a plain moving average.</div>
+      <div id="category-breakdown"></div>
+      <div class="forecast-strip" id="forecast-strip"></div>
+    </div>
+  </section>
+
+  <!-- ===== Accounts tab ===== -->
+  <section class="tab-panel" id="tab-accounts">
+    <div class="finance-section" style="margin-top:0">
+      <div class="ledger-heading"><span>Connect Your Accounts</span></div>
+      <div class="consent-note">
+        Simulates the RBI-regulated Account Aggregator (AA) framework — pick a bank,
+        approve a scoped consent artifact (which accounts, what data, for how long),
+        and it appears below as connected. No bank credentials are ever collected here;
+        that's the actual point of the AA model, not a shortcut this demo is taking.
+      </div>
+      <div class="provider-grid" id="provider-grid">
+        <div class="loading">Loading providers…</div>
+      </div>
+    </div>
+
+    <div class="finance-section">
+      <div class="ledger-heading"><span>Add Data Manually</span></div>
+      <div class="finance-note">Manually-added entries flow through detection, scoring, finance, and bills exactly like connected-account data.</div>
+      <div class="manual-forms">
+        <div class="manual-form-card">
+          <h3>New Transaction</h3>
+          <div class="field"><label>Merchant</label><input type="text" id="tx-merchant" placeholder="e.g. Swiggy"></div>
+          <div class="field"><label>Amount (₹)</label><input type="number" id="tx-amount" step="0.01" placeholder="499.00"></div>
+          <div class="field"><label>Direction</label>
+            <select id="tx-direction"><option value="debit">Debit</option><option value="credit">Credit</option></select>
+          </div>
+          <div class="field"><label>Category</label><input type="text" id="tx-category" placeholder="food"></div>
+          <div class="field"><label>Payment Mode</label>
+            <select id="tx-mode"><option value="upi">UPI</option><option value="card">Card</option><option value="netbanking">Netbanking</option></select>
+          </div>
+          <button class="primary-btn" id="tx-submit">Add Transaction</button>
+          <div class="form-msg" id="tx-msg"></div>
+        </div>
+
+        <div class="manual-form-card">
+          <h3>New Subscription</h3>
+          <div class="field"><label>Merchant</label><input type="text" id="sub-merchant" placeholder="e.g. Disney+ Hotstar"></div>
+          <div class="field"><label>Amount (₹)</label><input type="number" id="sub-amount" step="0.01" placeholder="299.00"></div>
+          <div class="field"><label>Billing Cycle</label>
+            <select id="sub-cycle"><option value="monthly">Monthly</option><option value="annual">Annual</option></select>
+          </div>
+          <div class="field"><label>Status</label>
+            <select id="sub-status"><option value="active">Active</option><option value="trial">Trial</option><option value="cancelled">Cancelled</option></select>
+          </div>
+          <button class="primary-btn" id="sub-submit">Add Subscription</button>
+          <div class="form-msg" id="sub-msg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
 </div>
 
 <script>
 const API = "http://127.0.0.1:8000";
 const confirmedFlagIds = new Set(); // persists across reloads within this session
 
+/* ---------------- Login gate ---------------- */
+function isLoggedIn() { return !!sessionStorage.getItem("pma_user"); }
+
+function showApp(username) {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("acct-username").textContent = username.toUpperCase();
+  loadEverything();
+  loadAccountsTab();
+}
+
+document.getElementById("login-btn").addEventListener("click", async () => {
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value.trim();
+  const errEl = document.getElementById("login-error");
+  if (!username || !password) {
+    errEl.textContent = "Enter a username and password.";
+    errEl.style.display = "block";
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error("login failed");
+    sessionStorage.setItem("pma_user", username);
+    errEl.style.display = "none";
+    showApp(username);
+  } catch (e) {
+    errEl.textContent = "Could not sign in — is the API running on :8000?";
+    errEl.style.display = "block";
+  }
+});
+
+document.getElementById("logout-btn").addEventListener("click", () => {
+  sessionStorage.removeItem("pma_user");
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+});
+
+if (isLoggedIn()) {
+  showApp(sessionStorage.getItem("pma_user"));
+}
+
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+  });
+});
+
+/* ---------------- Main dashboard data ---------------- */
 async function loadEverything() {
   // Sequenced, not parallel: /score relies on /flags having already
   // populated the pipeline's cache. Firing both at once caused a real
@@ -289,6 +582,14 @@ async function loadEverything() {
 function renderGrowth(growth) {
   document.getElementById("growth-count").textContent = `${growth.count} bills`;
   const container = document.getElementById("bills-list");
+  const badge = document.getElementById("bills-badge");
+  const overdueCount = (growth.bills || []).filter(b => b.overdue).length;
+  if (overdueCount > 0) {
+    badge.textContent = overdueCount;
+    badge.style.display = "inline-block";
+  } else {
+    badge.style.display = "none";
+  }
 
   if (!growth.count) {
     container.innerHTML = `<div class="empty">No bills due soon.</div>`;
@@ -450,7 +751,107 @@ document.getElementById("audit-toggle").addEventListener("click", async () => {
   toggle.textContent = "▾ Hide full audit trail";
 });
 
-loadEverything();
+/* ---------------- Accounts tab: connect flow + manual entry ---------------- */
+async function loadAccountsTab() {
+  const [providersRes, accountsRes] = await Promise.all([
+    fetch(`${API}/accounts/providers`).then(r => r.json()),
+    fetch(`${API}/accounts`).then(r => r.json()),
+  ]);
+  renderProviders(providersRes.providers, accountsRes.accounts);
+}
+
+function renderProviders(providers, connectedAccounts) {
+  const grid = document.getElementById("provider-grid");
+  const connectedIds = new Set(connectedAccounts.map(a => a.provider_id));
+
+  grid.innerHTML = providers.map(p => {
+    const isConnected = connectedIds.has(p.provider_id);
+    return `
+      <button class="provider-card ${isConnected ? 'connected' : ''}" data-provider="${p.provider_id}" ${isConnected ? 'disabled' : ''}>
+        <div class="p-name">${p.name}</div>
+        <div class="p-via">via ${p.via}</div>
+        ${isConnected ? '<div class="p-status">✓ Connected</div>' : ''}
+      </button>
+    `;
+  }).join("");
+
+  grid.querySelectorAll(".provider-card:not(.connected)").forEach(card => {
+    card.addEventListener("click", async () => {
+      card.disabled = true;
+      card.querySelector(".p-name").textContent += " — connecting…";
+      await fetch(`${API}/accounts/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider_id: card.dataset.provider }),
+      }).catch(() => {});
+      loadAccountsTab();
+    });
+  });
+}
+
+function showFormMsg(el, ok, text) {
+  el.textContent = text;
+  el.className = `form-msg ${ok ? 'ok' : 'err'}`;
+}
+
+document.getElementById("tx-submit").addEventListener("click", async () => {
+  const msgEl = document.getElementById("tx-msg");
+  const merchant = document.getElementById("tx-merchant").value.trim();
+  const amount = document.getElementById("tx-amount").value;
+  if (!merchant || !amount) {
+    showFormMsg(msgEl, false, "Merchant and amount are required.");
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/transactions/manual`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        merchant_name: merchant,
+        amount: parseFloat(amount),
+        direction: document.getElementById("tx-direction").value,
+        category: document.getElementById("tx-category").value.trim() || "other",
+        payment_mode: document.getElementById("tx-mode").value,
+      }),
+    });
+    if (!res.ok) throw new Error();
+    showFormMsg(msgEl, true, "Added — check the Ledger and Finance tabs.");
+    document.getElementById("tx-merchant").value = "";
+    document.getElementById("tx-amount").value = "";
+    loadEverything();
+  } catch (e) {
+    showFormMsg(msgEl, false, "Could not add transaction.");
+  }
+});
+
+document.getElementById("sub-submit").addEventListener("click", async () => {
+  const msgEl = document.getElementById("sub-msg");
+  const merchant = document.getElementById("sub-merchant").value.trim();
+  const amount = document.getElementById("sub-amount").value;
+  if (!merchant || !amount) {
+    showFormMsg(msgEl, false, "Merchant and amount are required.");
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/subscriptions/manual`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        merchant_name: merchant,
+        amount: parseFloat(amount),
+        billing_cycle: document.getElementById("sub-cycle").value,
+        status: document.getElementById("sub-status").value,
+      }),
+    });
+    if (!res.ok) throw new Error();
+    showFormMsg(msgEl, true, "Added — check the Ledger and Bills tabs.");
+    document.getElementById("sub-merchant").value = "";
+    document.getElementById("sub-amount").value = "";
+    loadEverything();
+  } catch (e) {
+    showFormMsg(msgEl, false, "Could not add subscription.");
+  }
+});
 </script>
 </body>
 </html>

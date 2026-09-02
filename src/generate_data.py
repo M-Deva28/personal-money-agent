@@ -10,9 +10,12 @@ Run: python generate_data.py
 """
 
 import json
+import os
 import random
 import uuid
 from datetime import datetime, timedelta
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 random.seed(42)  # reproducible demo run
 
@@ -61,6 +64,8 @@ def build_subscriptions(n=10):
         cycle = "monthly"
         trial_end = started + timedelta(days=14) if random.random() < 0.3 else None
         last_charged = rand_date(started, END_DATE - timedelta(days=5))
+        # Placeholder — recomputed after transactions exist and the real
+        # as_of (max transaction timestamp) is known. See _resolve_next_due_dates().
         next_due = last_charged + timedelta(days=30)
 
         pattern = "clean"
@@ -79,6 +84,11 @@ def build_subscriptions(n=10):
         elif roll < 0.35:
             # silent price hike (planted separately in transactions)
             pattern = "price_hike"
+        elif roll < 0.45:
+            # payment actually failed/lapsed recently -- genuinely overdue,
+            # NOT rolled forward in _resolve_next_due_dates(). Distinct from
+            # the "still renewing fine" case: this one really did stop.
+            pattern = "payment_failed"
 
         subs.append({
             "id": sub_id,
@@ -212,15 +222,54 @@ def build_transactions(subs, n_extra=60):
     return txns, ground_truth
 
 
+def _resolve_next_due_dates(subs, sub_patterns, txns):
+    """Fix the frozen-field bug: `next_due_date` was set once at
+    last_charged_date + 30 days and never rolled forward, so any
+    subscription whose last_charged_date fell well before the dataset's
+    real 'now' (as_of = max transaction timestamp, same convention used
+    everywhere in detector.py / growth.py) showed as absurdly overdue
+    even when its own transaction history proved it was being paid on
+    schedule (e.g. LIC Premium showing 242 days overdue).
+
+    Two genuinely different situations exist, and only one should roll
+    forward:
+      - Still renewing every cycle (all patterns except payment_failed):
+        roll next_due_date forward in monthly increments from
+        last_charged_date until it lands at/after as_of. Reflects that
+        an actively-billing subscription's next due date is always
+        within the current/upcoming cycle relative to now.
+      - `payment_failed`: the subscription genuinely stopped renewing
+        recently. This one is deliberately NOT rolled forward -- it
+        keeps a real, small overdue window (5-25 days), which is what
+        makes the "Overdue Bills" feature meaningful instead of vacuous.
+    """
+    as_of = max(datetime.fromisoformat(t["timestamp"]) for t in txns)
+    for sub in subs:
+        last_charged = datetime.fromisoformat(sub["last_charged_date"])
+        pattern = sub_patterns.get(sub["id"])
+        if pattern == "payment_failed":
+            overdue_by = timedelta(days=random.randint(5, 25))
+            sub["next_due_date"] = (as_of - overdue_by).date().isoformat()
+        else:
+            due = last_charged + timedelta(days=30)
+            while due < as_of:
+                due += timedelta(days=30)
+            sub["next_due_date"] = due.date().isoformat()
+    return subs
+
+
 def main():
     subs, sub_labels = build_subscriptions(n=10)
     txns, txn_labels = build_transactions(subs, n_extra=60)
+    sub_patterns = {g["id"]: g["label"] for g in sub_labels}
+    subs = _resolve_next_due_dates(subs, sub_patterns, txns)
 
-    with open("transactions.json", "w") as f:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(os.path.join(DATA_DIR, "transactions.json"), "w", encoding="utf-8") as f:
         json.dump(txns, f, indent=2)
-    with open("subscriptions.json", "w") as f:
+    with open(os.path.join(DATA_DIR, "subscriptions.json"), "w", encoding="utf-8") as f:
         json.dump(subs, f, indent=2)
-    with open("ground_truth.json", "w") as f:
+    with open(os.path.join(DATA_DIR, "ground_truth.json"), "w", encoding="utf-8") as f:
         json.dump(sub_labels + txn_labels, f, indent=2)
 
     print(f"Generated {len(txns)} transactions, {len(subs)} subscriptions, "

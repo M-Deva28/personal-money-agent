@@ -1,0 +1,42 @@
+[
+  {
+    "account_id": "acc_e98acf50",
+    "provider_id": "sbi",
+    "provider_name": "State Bank of India",
+    "via": "Setu AA",
+    "connected_at": "2026-09-01T07:56:46.535841",
+    "consent_scope": "transactions, balances -- 12 months, revocable any time"
+  },
+  {
+    "account_id": "acc_5cb15714",
+    "provider_id": "icici",
+    "provider_name": "ICICI Bank",
+    "via": "OneMoney AA",
+    "connected_at": "2026-09-01T07:56:54.658542",
+    "consent_scope": "transactions, balances -- 12 months, revocable any time"
+  },
+  {
+    "account_id": "acc_60da77e7",
+    "provider_id": "kotak",
+    "provider_name": "Kotak Mahindra Bank",
+    "via": "Anumati AA",
+    "connected_at": "2026-09-01T07:56:56.095231",
+    "consent_scope": "transactions, balances -- 12 months, revocable any time"
+  },
+  {
+    "account_id": "acc_549ecd17",
+    "provider_id": "hdfc",
+    "provider_name": "HDFC Bank",
+    "via": "Finvu AA",
+    "connected_at": "2026-09-01T08:44:53.084551",
+    "consent_scope": "transactions, balances -- 12 months, revocable any time"
+  },
+  {
+    "account_id": "acc_9882444d",
+    "provider_id": "axis",
+    "provider_name": "Axis Bank",
+    "via": "Finvu AA",
+    "connected_at": "2026-09-01T08:44:54.016899",
+    "consent_scope": "transactions, balances -- 12 months, revocable any time"
+  }
+]

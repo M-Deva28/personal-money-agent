@@ -31,8 +31,32 @@ from llm_reasoner import review_all_medium_confidence
 from razorpay_actions import execute_action
 from finance import finance_summary
 from growth import growth_summary
+from accounts import (
+    AA_PROVIDERS,
+    list_connected_accounts,
+    connect_account,
+    disconnect_account,
+    add_manual_transaction,
+    add_manual_subscription,
+)
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+
+
+def _as_dict(model: BaseModel) -> dict:
+    """
+    Pydantic v2 renamed .dict() to .model_dump(). This project's
+    requirements.txt pins fastapi==0.115.0 (which wants pydantic v2),
+    but a pre-existing pydantic v1 install in the environment can still
+    end up satisfying it -- confirmed via a real 500
+    (`'ManualTransactionRequest' object has no attribute 'model_dump'`)
+    the first time a manual-entry form was submitted. Support both so
+    this doesn't depend on which one happens to be installed.
+    """
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()
+
 
 app = FastAPI(title="Personal Money Agent")
 
@@ -98,6 +122,39 @@ class FeedbackRequest(BaseModel):
 class AutopayRequest(BaseModel):
     merchant_name: str
     enabled: bool
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class ConnectAccountRequest(BaseModel):
+    provider_id: str
+
+
+class ManualTransactionRequest(BaseModel):
+    amount: float
+    merchant_name: str
+    direction: str | None = "debit"
+    category: str | None = "other"
+    payment_mode: str | None = "upi"
+    memo: str | None = None
+    timestamp: str | None = None
+    linked_subscription_id: str | None = None
+    account: str | None = None
+
+
+class ManualSubscriptionRequest(BaseModel):
+    merchant_name: str
+    amount: float
+    billing_cycle: str | None = "monthly"
+    started_date: str | None = None
+    last_charged_date: str | None = None
+    next_due_date: str | None = None
+    status: str | None = "active"
+    trial_end_date: str | None = None
+    last_usage_signal_date: str | None = None
 
 
 @app.get("/")
@@ -193,3 +250,64 @@ def set_autopay(req: AutopayRequest):
     from feedback import set_autopay as _set_autopay
     updated_profile = _set_autopay(req.merchant_name, req.enabled)
     return {"status": "recorded", "autopay_enabled_merchants": updated_profile["autopay_enabled_merchants"]}
+
+
+@app.post("/auth/login")
+def login(req: LoginRequest):
+    """
+    Demo-only gate, not real authentication -- there is no user table
+    and nothing is hashed or persisted. It exists so the dashboard can
+    demonstrate "the agent belongs to a logged-in user" for the pitch,
+    not to secure anything. Accepts any non-empty username/password.
+    """
+    if not req.username.strip() or not req.password.strip():
+        raise HTTPException(status_code=400, detail="Username and password required")
+    return {"status": "ok", "user": req.username}
+
+
+@app.get("/accounts/providers")
+def get_providers():
+    """AA-style provider picker -- what the user chooses from to 'connect' an account."""
+    return {"providers": AA_PROVIDERS}
+
+
+@app.get("/accounts")
+def get_accounts():
+    return {"accounts": list_connected_accounts()}
+
+
+@app.post("/accounts/connect")
+def post_connect_account(req: ConnectAccountRequest):
+    """
+    Simulates an Account Aggregator consent flow completing. No bank
+    credentials are collected here or anywhere in this app -- that's
+    the actual point of the AA model this mirrors, not a shortcut.
+    """
+    try:
+        accounts = connect_account(req.provider_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "connected", "accounts": accounts}
+
+
+@app.post("/accounts/disconnect")
+def post_disconnect_account(account_id: str):
+    accounts = disconnect_account(account_id)
+    return {"status": "disconnected", "accounts": accounts}
+
+
+@app.post("/transactions/manual")
+def post_manual_transaction(req: ManualTransactionRequest):
+    """
+    Appends a user-entered transaction to data/transactions.json -- the
+    same file the detector reads, so a manually-added entry flows
+    through detection/scoring/finance/growth exactly like generated data.
+    """
+    entry = add_manual_transaction(_as_dict(req))
+    return {"status": "added", "transaction": entry}
+
+
+@app.post("/subscriptions/manual")
+def post_manual_subscription(req: ManualSubscriptionRequest):
+    entry = add_manual_subscription(_as_dict(req))
+    return {"status": "added", "subscription": entry}

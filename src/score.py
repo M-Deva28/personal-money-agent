@@ -7,7 +7,11 @@ Run: python src/score.py
 
 import json
 import os
+import sys
 from collections import defaultdict
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 from detector import run_all_detectors
 from audit import log_decision, decide_action, clear_log
