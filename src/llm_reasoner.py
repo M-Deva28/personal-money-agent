@@ -102,7 +102,13 @@ def review_ambiguous_flag(flag, context=None):
         elif parsed["verdict"] == "likely_false_alarm":
             result["confidence"] = "low_likely_false_alarm"
 
-        result["reasoning"] = f"{flag['reasoning']} LLM review: {parsed['explanation']}"
+        # NOTE: deliberately NOT appending the LLM's explanation into
+        # result["reasoning"] here. The dashboard already renders
+        # llm_explanation in its own separate line -- appending it here
+        # too caused a real duplication bug (same sentence shown twice
+        # on one card), caught via a screenshot during live testing.
+        # reasoning stays as the rule's original text; llm_explanation
+        # carries the LLM's added commentary, shown once, separately.
 
     except Exception as e:
         result["llm_reasoning"] = f"LLM review failed ({e}) -- using rule-based reasoning only."
