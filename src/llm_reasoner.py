@@ -16,6 +16,22 @@ raises confidence to high.
 Requires GEMINI_API_KEY in the environment. If missing, falls back to
 the rule's original reasoning untouched -- the system must degrade
 gracefully, not crash, if the LLM is unavailable.
+
+CACHING -- added after a real problem surfaced in live testing: every
+dashboard reload re-ran the full pipeline, which called the LLM fresh
+for all 13 medium-confidence flags EVERY time. Google's free tier
+allows only 20 requests/day for this model, so that burned the entire
+day's quota in under two page loads (confirmed via live 429
+RESOURCE_EXHAUSTED errors), and even before hitting the limit, 13
+sequential live API calls made every reload visibly slow.
+
+Fix: cache each flag's review, keyed by flag_id, to disk. Once a flag
+has been successfully reviewed, every future run reuses that cached
+verdict instantly -- no repeat API call, no repeat latency. Only a
+flag that has never been reviewed (or whose last attempt failed)
+calls the API. This is also a more honest product behavior anyway:
+a real personal agent shouldn't need to re-ask the same question
+about the same unchanged event every time you open the app.
 """
 
 import os
@@ -31,6 +47,9 @@ except ImportError:
 MODEL = "gemini-3.6-flash"  # gemini-2.5-flash was deprecated for new users
                              # (confirmed via a live 404 from the API itself,
                              # which named this as the replacement)
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+_CACHE_PATH = os.path.join(DATA_DIR, "llm_review_cache.json")
 
 SYSTEM_PROMPT = """You are a careful assistant reviewing a single flagged \
 personal-finance event for a user. A rule-based system already detected a \
@@ -58,16 +77,51 @@ def _build_user_prompt(flag, context):
     }, indent=2)
 
 
+def _load_cache():
+    if os.path.exists(_CACHE_PATH):
+        with open(_CACHE_PATH) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_cache(cache):
+    with open(_CACHE_PATH, "w") as f:
+        json.dump(cache, f, indent=2)
+
+
+def _cache_key(flag):
+    # flag_id (event_id + pattern) uniquely identifies this flag -- see
+    # detector.py's run_all_detectors for why event_id alone isn't safe.
+    return flag.get("flag_id") or f"{flag['event_id']}__{flag['pattern']}"
+
+
 def review_ambiguous_flag(flag, context=None):
     """
     context: optional dict with extra info the rule didn't have, e.g.
       {"user_note": "I travel a lot for work", "recent_similar_events": [...]}
 
     Returns an updated flag dict. Never raises on API failure -- degrades
-    to the original rule output so the pipeline keeps running.
+    to the original rule output so the pipeline keeps running. Checks
+    the on-disk cache first; only calls the API for flags that have
+    never been successfully reviewed before.
     """
     context = context or {}
     result = dict(flag)  # don't mutate caller's copy
+    key = _cache_key(flag)
+
+    cache = _load_cache()
+    if key in cache:
+        cached = cache[key]
+        result["llm_reviewed"] = True
+        result["llm_verdict"] = cached["llm_verdict"]
+        result["llm_explanation"] = cached["llm_explanation"]
+        result["llm_from_cache"] = True
+        if cached["llm_verdict"] == "likely_genuine" and cached["confidence"] == "high":
+            result["confidence"] = "high"
+        elif cached["llm_verdict"] == "likely_false_alarm":
+            result["confidence"] = "low_likely_false_alarm"
+        return result
+
     result["llm_reviewed"] = False
 
     if not _CLIENT_AVAILABLE:
@@ -109,6 +163,16 @@ def review_ambiguous_flag(flag, context=None):
         # on one card), caught via a screenshot during live testing.
         # reasoning stays as the rule's original text; llm_explanation
         # carries the LLM's added commentary, shown once, separately.
+
+        # Only cache on SUCCESS. A failed attempt (e.g. rate limit) is
+        # deliberately not cached, so it retries on the next run instead
+        # of permanently freezing a fallback message.
+        cache[key] = {
+            "llm_verdict": parsed["verdict"],
+            "confidence": parsed["confidence"],
+            "llm_explanation": parsed["explanation"],
+        }
+        _save_cache(cache)
 
     except Exception as e:
         result["llm_reasoning"] = f"LLM review failed ({e}) -- using rule-based reasoning only."

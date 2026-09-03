@@ -11,6 +11,7 @@ __pycache__/
 # Generated at runtime -- not source, shouldn't be committed
 logs/audit_trail.json
 data/user_profile.json
+data/llm_review_cache.json
 
 # OS noise
 .DS_Store
