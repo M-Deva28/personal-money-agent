@@ -1,14 +1,19 @@
 """
-LLM layer — used ONLY for medium-confidence flags where a rule fired but
+LLM layer -- used ONLY for medium-confidence flags where a rule fired but
 genuinely needs judgment a fixed threshold can't capture.
 
-Design principle: rules decide WHETHER to escalate (fast, free, deterministic).
-The LLM only decides HOW to handle what's already been escalated (nuanced,
-costs money, non-deterministic) -- and it never gets to auto-execute an
-action on its own. Its output always lands in needs_review or gets promoted
-to auto_executed only if it explicitly raises confidence to high.
+Uses Google's Gemini API (via Google AI Studio) rather than Anthropic --
+chosen for its generous free tier, which matters for a student budget.
+Get a free key at https://aistudio.google.com -> Get API key.
 
-Requires ANTHROPIC_API_KEY in the environment. If missing, falls back to
+Design principle: rules decide WHETHER to escalate (fast, free,
+deterministic). The LLM only decides HOW to handle what's already been
+escalated (nuanced, costs a request, non-deterministic) -- and it never
+gets to auto-execute an action on its own. Its output always lands in
+needs_review or gets promoted to auto_executed only if it explicitly
+raises confidence to high.
+
+Requires GEMINI_API_KEY in the environment. If missing, falls back to
 the rule's original reasoning untouched -- the system must degrade
 gracefully, not crash, if the LLM is unavailable.
 """
@@ -17,12 +22,15 @@ import os
 import json
 
 try:
-    import anthropic
-    _CLIENT_AVAILABLE = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    from google import genai
+    from google.genai import types
+    _CLIENT_AVAILABLE = bool(os.environ.get("GEMINI_API_KEY"))
 except ImportError:
     _CLIENT_AVAILABLE = False
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "gemini-3.6-flash"  # gemini-2.5-flash was deprecated for new users
+                             # (confirmed via a live 404 from the API itself,
+                             # which named this as the replacement)
 
 SYSTEM_PROMPT = """You are a careful assistant reviewing a single flagged \
 personal-finance event for a user. A rule-based system already detected a \
@@ -64,21 +72,23 @@ def review_ambiguous_flag(flag, context=None):
 
     if not _CLIENT_AVAILABLE:
         result["llm_reasoning"] = (
-            "LLM review unavailable (no API key set) -- falling back to "
-            "rule-based reasoning only."
+            "LLM review unavailable (no GEMINI_API_KEY set) -- falling back "
+            "to rule-based reasoning only."
         )
         return result
 
     try:
-        client = anthropic.Anthropic()
-        response = client.messages.create(
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        response = client.models.generate_content(
             model=MODEL,
-            max_tokens=300,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": _build_user_prompt(flag, context)}],
+            contents=_build_user_prompt(flag, context),
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                max_output_tokens=300,
+            ),
         )
-        raw = response.content[0].text.strip()
-        parsed = json.loads(raw)
+        parsed = json.loads(response.text)
 
         result["llm_reviewed"] = True
         result["llm_verdict"] = parsed["verdict"]
