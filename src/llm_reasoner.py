@@ -44,9 +44,19 @@ try:
 except ImportError:
     _CLIENT_AVAILABLE = False
 
-MODEL = "gemini-3.6-flash"  # gemini-2.5-flash was deprecated for new users
-                             # (confirmed via a live 404 from the API itself,
-                             # which named this as the replacement)
+MODEL = "gemini-2.5-flash-lite"  # Switched from gemini-3.6-flash after
+    # hitting a real, confirmed 20/day quota on that model (live 429
+    # RESOURCE_EXHAUSTED error). Free-tier quotas are tracked per-model
+    # and change frequently -- rather than guess at a number from
+    # inconsistent docs, we picked the older, more established "Lite"
+    # tier, which independent sources consistently describe as having
+    # Google's most generous free allowance. This also gives a fresh,
+    # separate quota bucket immediately, no waiting for a reset.
+    #
+    # Combined with the caching in this file: we only need this
+    # quota to cover ONE clean pass over the unique medium-confidence
+    # flags (13 in the current dataset) ONE time, ever -- after that,
+    # every flag's review is permanently cached and costs nothing.
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 _CACHE_PATH = os.path.join(DATA_DIR, "llm_review_cache.json")
@@ -180,19 +190,45 @@ def review_ambiguous_flag(flag, context=None):
     return result
 
 
-def review_all_medium_confidence(flags, context_lookup=None):
+def review_all_medium_confidence(flags, context_lookup=None, max_live_calls=5):
     """
     context_lookup: optional dict mapping event_id -> context dict.
     Only touches flags with confidence == "medium"; high-confidence flags
     pass through untouched (no need to spend API calls on things the
     rules are already sure about).
+
+    max_live_calls: safety cap on how many UNCACHED flags get a live API
+    call in a single run. Cached flags are always resolved (free, no
+    network) regardless of this cap. Prevents a bad quota day from
+    turning every dashboard load into a slow sweep of 13 doomed
+    requests -- once the cap is hit, remaining uncached flags fall back
+    to rule-based reasoning for this run and get picked up on a later
+    run instead.
     """
     context_lookup = context_lookup or {}
+    cache = _load_cache()
     reviewed = []
+    live_calls_made = 0
+
     for flag in flags:
-        if flag["confidence"] == "medium":
+        if flag["confidence"] != "medium":
+            reviewed.append(flag)
+            continue
+
+        key = _cache_key(flag)
+        if key in cache or live_calls_made < max_live_calls:
+            if key not in cache:
+                live_calls_made += 1
             ctx = context_lookup.get(flag["event_id"], {})
             reviewed.append(review_ambiguous_flag(flag, ctx))
         else:
-            reviewed.append(flag)
+            result = dict(flag)
+            result["llm_reviewed"] = False
+            result["llm_reasoning"] = (
+                f"Skipped live LLM review this run (per-run cap of "
+                f"{max_live_calls} uncached calls reached) -- falling back "
+                f"to rule-based reasoning. Will retry on a future run."
+            )
+            reviewed.append(result)
+
     return reviewed
