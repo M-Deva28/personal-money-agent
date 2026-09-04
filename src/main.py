@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-load_dotenv()  # must run before jarvis_brain import below, which reads
+load_dotenv()  # must run before vault_brain import below, which reads
                 # GEMINI_API_KEY at import time -- same for ANTHROPIC_API_KEY
                 # in llm_reasoner.py and the RAZORPAY_* keys further down.
 
@@ -40,7 +40,7 @@ from scoring import compute_score
 from llm_reasoner import review_all_medium_confidence
 from razorpay_actions import execute_action, set_user_context as set_rzp_context
 from finance import build_finance_report
-from jarvis_brain import respond as jarvis_respond, GeminiUnavailable
+from vault_brain import respond as vault_respond, GeminiUnavailable
 from growth import growth_summary, set_user_context as set_growth_context
 from accounts import (
     AA_PROVIDERS,
@@ -513,15 +513,15 @@ def post_disconnect_account(req: AccountIdIn, user_id: str = Depends(current_use
 @app.post("/chat")
 def chat(req: ChatRequest, user_id: str = Depends(current_user)):
     """
-    Powers the dashboard's "Hey Jarvis" voice assistant. The browser
+    Powers the dashboard's "Hey Vault" voice assistant. The browser
     keeps conversation history client-side and sends it back each turn;
-    Jarvis's tools run against THE LOGGED-IN USER's data (voice_tools
+    Vault's tools run against THE LOGGED-IN USER's data (voice_tools
     picks up a per-request context set just below).
     """
     history = [m.model_dump() for m in req.history]
     voice_tools.set_user_context(store.user_dir(user_id))
     try:
-        reply, tool_calls = jarvis_respond(history)
+        reply, tool_calls = vault_respond(history)
     except GeminiUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
     except RuntimeError as e:

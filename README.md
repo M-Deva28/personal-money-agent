@@ -16,7 +16,7 @@ audit trail.
 - [x] Feedback loop — adaptive thresholds, now per-user (`src/feedback.py`)
 - [x] LLM layer — reviews medium-confidence flags only, degrades gracefully without API key (`src/llm_reasoner.py`)
 - [x] Razorpay test-mode action executor — mocks gracefully without keys (`src/razorpay_actions.py`)
-- [x] Dashboard UI — ledger, audit tape, finance, Jarvis (static/dashboard.html)
+- [x] Dashboard UI — ledger, audit tape, finance, Vault voice assistant (static/dashboard.html)
 - [x] Finance mode: spend categorization + forecast
 - [x] **Multi-user accounts & auth** — register/login, per-user isolation, signed sessions (`src/security.py`, `src/store.py`)
 - [x] **Manual transaction entry** — add expenses by hand via the dashboard or `POST /transactions`

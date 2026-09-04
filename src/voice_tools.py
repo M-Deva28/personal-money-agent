@@ -1,5 +1,5 @@
 """
-Voice/chat tools for the dashboard's built-in Jarvis assistant.
+Voice/chat tools for the dashboard's built-in Vault assistant.
 
 This is the CANONICAL version -- it calls detector.py / finance.py /
 feedback.py directly, the same modules /flags, /finance, and /feedback
@@ -21,7 +21,7 @@ from finance import build_finance_report
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-# main.py sets a per-request user context before calling Jarvis, so the
+# main.py sets a per-request user context before calling Vault, so the
 # tools operate on THAT user's ledger/profile, not the bundled demo
 # dataset. Thread-local because uvicorn serves sync endpoints on a thread
 # pool; the CLI scripts never set a context and keep using DATA_DIR.

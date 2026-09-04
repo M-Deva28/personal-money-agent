@@ -257,41 +257,41 @@
   .badge.live{ background:var(--good-soft); color:var(--good); }
   .conn-actions{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
 
-  /* ---------- jarvis panel ---------- */
-  .jarvis-panel{ margin-top:20px; }
-  .jarvis-panel h2{ justify-content:space-between; }
-  .jarvis-status{ display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono'; font-size:11px; color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0; }
-  .jarvis-status .dot{ background:var(--text-dim); box-shadow:none; transition:background .2s, box-shadow .2s; }
-  .jarvis-status .dot.listening{ background:var(--good); box-shadow:0 0 0 4px var(--good-soft); animation:pulse 1.6s infinite; }
-  .jarvis-status .dot.thinking{ background:var(--medium); box-shadow:0 0 0 4px var(--medium-soft); animation:pulse 0.9s infinite; }
-  .jarvis-status .dot.speaking{ background:var(--paper); box-shadow:0 0 0 4px rgba(243,236,217,0.25); animation:pulse 0.9s infinite; }
+  /* ---------- vault panel ---------- */
+  .vault-panel{ margin-top:20px; }
+  .vault-panel h2{ justify-content:space-between; }
+  .vault-status{ display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono'; font-size:11px; color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0; }
+  .vault-status .dot{ background:var(--text-dim); box-shadow:none; transition:background .2s, box-shadow .2s; }
+  .vault-status .dot.listening{ background:var(--good); box-shadow:0 0 0 4px var(--good-soft); animation:pulse 1.6s infinite; }
+  .vault-status .dot.thinking{ background:var(--medium); box-shadow:0 0 0 4px var(--medium-soft); animation:pulse 0.9s infinite; }
+  .vault-status .dot.speaking{ background:var(--paper); box-shadow:0 0 0 4px rgba(243,236,217,0.25); animation:pulse 0.9s infinite; }
   @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.45; } }
 
-  .jarvis-body{ display:grid; grid-template-columns: 260px 1fr; gap:20px; }
-  @media (max-width: 700px){ .jarvis-body{ grid-template-columns:1fr; } }
-  .jarvis-toggle{ width:100%; }
-  .jarvis-hint{ font-size:12px; line-height:1.6; color:var(--text-dim); margin:12px 0 16px; }
-  .jarvis-type-form{ display:flex; gap:6px; }
-  .jarvis-type-form input{
+  .vault-body{ display:grid; grid-template-columns: 260px 1fr; gap:20px; }
+  @media (max-width: 700px){ .vault-body{ grid-template-columns:1fr; } }
+  .vault-toggle{ width:100%; }
+  .vault-hint{ font-size:12px; line-height:1.6; color:var(--text-dim); margin:12px 0 16px; }
+  .vault-type-form{ display:flex; gap:6px; }
+  .vault-type-form input{
     flex:1; background:var(--panel-2); border:1px solid var(--rule); border-radius:6px;
     color:var(--text); font-family:'Inter'; font-size:13px; padding:8px 10px;
   }
-  .jarvis-type-form input:focus{ outline:none; border-color:var(--good); }
+  .vault-type-form input:focus{ outline:none; border-color:var(--good); }
 
-  .jarvis-transcript{
+  .vault-transcript{
     background:var(--panel-2); border:1px solid var(--rule); border-radius:8px;
     padding:12px 14px; max-height:280px; overflow-y:auto;
     display:flex; flex-direction:column; gap:8px;
   }
-  .jarvis-line{ font-size:13px; line-height:1.5; }
-  .jarvis-line-system{ color:var(--text-dim); font-style:italic; font-size:12px; }
-  .jarvis-line-user::before{ content:'you  '; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--text-dim); }
-  .jarvis-line-assistant::before{ content:'jarvis  '; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--good); }
-  .jarvis-line-tool{
+  .vault-line{ font-size:13px; line-height:1.5; }
+  .vault-line-system{ color:var(--text-dim); font-style:italic; font-size:12px; }
+  .vault-line-user::before{ content:'you  '; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--text-dim); }
+  .vault-line-assistant::before{ content:'vault  '; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--good); }
+  .vault-line-tool{
     font-family:'JetBrains Mono'; font-size:11px; color:var(--medium);
     padding-left:10px; border-left:2px solid var(--medium-soft);
   }
-  .jarvis-line-error{ color:var(--high); font-size:12.5px; }
+  .vault-line-error{ color:var(--high); font-size:12.5px; }
 
   /* ============ de-dim polish: brighter hierarchy + depth, to match the auth pages ============ */
   :root{
@@ -347,7 +347,7 @@
   .tier-label::after{ background:var(--rule); }
   .badge{ box-shadow:inset 0 0 0 1px rgba(0,0,0,0.18); }
   .acct-line b{ color:#fff; }
-  .jarvis-transcript, .jarvis-type-form input{ background:var(--panel-2); }
+  .vault-transcript, .vault-type-form input{ background:var(--panel-2); }
   .ghost, .actions button{ transition:all .15s; }
   .ghost.small{ transition:border-color .15s, background .15s, color .15s, transform .15s; }
   .ghost.small:hover{ transform:translateY(-1px); }
@@ -471,26 +471,26 @@
     <div id="billsHost"><p class="empty-note">Loading…</p></div>
   </div>
 
-  <div class="panel jarvis-panel">
+  <div class="panel vault-panel">
     <h2>
-      Jarvis
-      <span class="jarvis-status" id="jarvisStatus"><span class="dot" id="jarvisDot"></span><span id="jarvisStatusText">not listening</span></span>
+      Vault
+      <span class="vault-status" id="vaultStatus"><span class="dot" id="vaultDot"></span><span id="vaultStatusText">not listening</span></span>
     </h2>
-    <div class="jarvis-body">
-      <div class="jarvis-controls">
-        <button class="ghost jarvis-toggle" id="jarvisToggle">Enable "Hey Jarvis"</button>
-        <p class="jarvis-hint" id="jarvisHint">
-          Click once to grant mic access, then just say <strong>"Hey Jarvis"</strong>
+    <div class="vault-body">
+      <div class="vault-controls">
+        <button class="ghost vault-toggle" id="vaultToggle">Enable "Hey Vault"</button>
+        <p class="vault-hint" id="vaultHint">
+          Click once to grant mic access, then just say <strong>"Hey Vault"</strong>
           followed by your question — hands-free, no button-holding needed.
           Needs Chrome or Edge.
         </p>
-        <form id="jarvisTypeForm" class="jarvis-type-form">
-          <input type="text" id="jarvisTypeInput" placeholder="…or type to Jarvis instead" autocomplete="off" />
+        <form id="vaultTypeForm" class="vault-type-form">
+          <input type="text" id="vaultTypeInput" placeholder="…or type to Vault instead" autocomplete="off" />
           <button type="submit" class="ghost">Send</button>
         </form>
       </div>
-      <div class="jarvis-transcript" id="jarvisTranscript">
-        <div class="jarvis-line jarvis-line-system">Say "Hey Jarvis, how's my money looking?" to try it.</div>
+      <div class="vault-transcript" id="vaultTranscript">
+        <div class="vault-line vault-line-system">Say "Hey Vault, how's my money looking?" to try it.</div>
       </div>
     </div>
   </div>
@@ -1123,76 +1123,76 @@ async function boot(){
 
 boot();
 
-// ---------------- Jarvis (hands-free voice, "Hey Jarvis") ----------------
-const JARVIS_HISTORY = [];
+// ---------------- Vault (hands-free voice, "Hey Vault") ----------------
+const VAULT_HISTORY = [];
 const MAX_HISTORY = 20;
-let jarvisListening = false;
-let jarvisAwaitingFollowUp = false;
+let vaultListening = false;
+let vaultAwaitingFollowUp = false;
 let followUpTimer = null;
 let recognition = null;
 
 const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-function setJarvisStatus(state){
-  const dot = $("jarvisDot");
+function setVaultStatus(state){
+  const dot = $("vaultDot");
   dot.className = "dot" + (state !== "idle" ? " " + state : "");
   const labels = {
     idle: "not listening",
-    listening: "listening for \u201cHey Jarvis\u201d",
+    listening: "listening for \u201cHey Vault\u201d",
     thinking: "thinking\u2026",
     speaking: "speaking\u2026",
   };
-  $("jarvisStatusText").textContent = labels[state] || state;
+  $("vaultStatusText").textContent = labels[state] || state;
 }
 
-function addJarvisLine(cls, text){
-  const host = $("jarvisTranscript");
+function addVaultLine(cls, text){
+  const host = $("vaultTranscript");
   const div = document.createElement("div");
-  div.className = "jarvis-line jarvis-line-" + cls;
+  div.className = "vault-line vault-line-" + cls;
   div.textContent = text;
   host.appendChild(div);
   host.scrollTop = host.scrollHeight;
 }
 
 function speak(text){
-  if (!window.speechSynthesis){ setJarvisStatus(jarvisListening ? "listening" : "idle"); return; }
+  if (!window.speechSynthesis){ setVaultStatus(vaultListening ? "listening" : "idle"); return; }
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  utter.onstart = () => setJarvisStatus("speaking");
-  utter.onend = () => setJarvisStatus(jarvisListening ? "listening" : "idle");
+  utter.onstart = () => setVaultStatus("speaking");
+  utter.onend = () => setVaultStatus(vaultListening ? "listening" : "idle");
   window.speechSynthesis.speak(utter);
 }
 
-async function sendToJarvis(text){
-  addJarvisLine("user", text);
-  JARVIS_HISTORY.push({ role: "user", content: text });
-  if (JARVIS_HISTORY.length > MAX_HISTORY) JARVIS_HISTORY.splice(0, JARVIS_HISTORY.length - MAX_HISTORY);
+async function sendToVault(text){
+  addVaultLine("user", text);
+  VAULT_HISTORY.push({ role: "user", content: text });
+  if (VAULT_HISTORY.length > MAX_HISTORY) VAULT_HISTORY.splice(0, VAULT_HISTORY.length - MAX_HISTORY);
 
-  setJarvisStatus("thinking");
+  setVaultStatus("thinking");
   try {
     const res = await fetch(`${API}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ history: JARVIS_HISTORY }),
+      body: JSON.stringify({ history: VAULT_HISTORY }),
     });
     if (res.status === 401){ location.href = "/login.html"; return; }
     if (!res.ok){
       const err = await res.json().catch(() => ({ detail: "Something went wrong." }));
-      addJarvisLine("error", err.detail || "Jarvis couldn't respond.");
-      setJarvisStatus(jarvisListening ? "listening" : "idle");
+      addVaultLine("error", err.detail || "Vault couldn't respond.");
+      setVaultStatus(vaultListening ? "listening" : "idle");
       return;
     }
     const data = await res.json();
-    (data.tool_calls || []).forEach(tc => addJarvisLine("tool", `\u2192 ${tc.name}(${JSON.stringify(tc.args)})`));
-    addJarvisLine("assistant", data.reply);
-    JARVIS_HISTORY.push({ role: "assistant", content: data.reply });
+    (data.tool_calls || []).forEach(tc => addVaultLine("tool", `\u2192 ${tc.name}(${JSON.stringify(tc.args)})`));
+    addVaultLine("assistant", data.reply);
+    VAULT_HISTORY.push({ role: "assistant", content: data.reply });
     speak(data.reply);
     // A tool call likely changed flags, thresholds, or the forecast --
-    // refresh the rest of the dashboard so it's not just Jarvis's word for it.
+    // refresh the rest of the dashboard so it's not just Vault's word for it.
     if ((data.tool_calls || []).length) loadAll();
   } catch (e) {
-    addJarvisLine("error", "Couldn't reach Jarvis's brain — is the backend running?");
-    setJarvisStatus(jarvisListening ? "listening" : "idle");
+    addVaultLine("error", "Couldn't reach Vault's brain — is the backend running?");
+    setVaultStatus(vaultListening ? "listening" : "idle");
   }
 }
 
@@ -1208,38 +1208,38 @@ function startRecognition(){
     const transcript = result[0].transcript.trim();
     if (!transcript) return;
 
-    if (jarvisAwaitingFollowUp){
+    if (vaultAwaitingFollowUp){
       clearTimeout(followUpTimer);
-      jarvisAwaitingFollowUp = false;
-      sendToJarvis(transcript);
+      vaultAwaitingFollowUp = false;
+      sendToVault(transcript);
       return;
     }
 
     const lower = transcript.toLowerCase();
-    const idx = lower.indexOf("jarvis");
+    const idx = lower.indexOf("vault");
     if (idx === -1) return; // no wake word heard -- ignore ambient speech
 
-    const command = transcript.slice(idx + "jarvis".length).replace(/^[,:\s]+/, "").trim();
+    const command = transcript.slice(idx + "vault".length).replace(/^[,:\s]+/, "").trim();
     if (command){
-      sendToJarvis(command);
+      sendToVault(command);
     } else {
-      addJarvisLine("system", "Yes?");
+      addVaultLine("system", "Yes?");
       speak("Yes?");
-      jarvisAwaitingFollowUp = true;
-      followUpTimer = setTimeout(() => { jarvisAwaitingFollowUp = false; }, 8000);
+      vaultAwaitingFollowUp = true;
+      followUpTimer = setTimeout(() => { vaultAwaitingFollowUp = false; }, 8000);
     }
   };
 
   recognition.onerror = (event) => {
     if (event.error === "not-allowed" || event.error === "service-not-allowed"){
-      addJarvisLine("error", "Mic access was blocked — allow microphone access for this page and try again.");
-      stopJarvisListening();
+      addVaultLine("error", "Mic access was blocked — allow microphone access for this page and try again.");
+      stopVaultListening();
     }
     // other errors (e.g. 'no-speech') are transient -- onend below restarts listening
   };
 
   recognition.onend = () => {
-    if (jarvisListening){
+    if (vaultListening){
       try { recognition.start(); } catch (e) { /* a start was already pending */ }
     }
   };
@@ -1247,37 +1247,37 @@ function startRecognition(){
   recognition.start();
 }
 
-function stopJarvisListening(){
-  jarvisListening = false;
+function stopVaultListening(){
+  vaultListening = false;
   if (recognition) recognition.stop();
-  $("jarvisToggle").textContent = 'Enable "Hey Jarvis"';
-  setJarvisStatus("idle");
+  $("vaultToggle").textContent = 'Enable "Hey Vault"';
+  setVaultStatus("idle");
 }
 
-function startJarvisListening(){
-  jarvisListening = true;
+function startVaultListening(){
+  vaultListening = true;
   startRecognition();
-  $("jarvisToggle").textContent = 'Disable "Hey Jarvis"';
-  setJarvisStatus("listening");
-  addJarvisLine("system", "Listening for \u201cHey Jarvis\u201d\u2026");
+  $("vaultToggle").textContent = 'Disable "Hey Vault"';
+  setVaultStatus("listening");
+  addVaultLine("system", "Listening for \u201cHey Vault\u201d\u2026");
 }
 
 if (SRClass){
-  $("jarvisToggle").addEventListener("click", () => {
-    jarvisListening ? stopJarvisListening() : startJarvisListening();
+  $("vaultToggle").addEventListener("click", () => {
+    vaultListening ? stopVaultListening() : startVaultListening();
   });
 } else {
-  $("jarvisToggle").disabled = true;
-  $("jarvisHint").textContent = "Hands-free voice needs Chrome or Edge on this device — type to Jarvis below instead.";
+  $("vaultToggle").disabled = true;
+  $("vaultHint").textContent = "Hands-free voice needs Chrome or Edge on this device — type to Vault below instead.";
 }
 
-$("jarvisTypeForm").addEventListener("submit", (e) => {
+$("vaultTypeForm").addEventListener("submit", (e) => {
   e.preventDefault();
-  const input = $("jarvisTypeInput");
+  const input = $("vaultTypeInput");
   const text = input.value.trim();
   if (!text) return;
   input.value = "";
-  sendToJarvis(text);
+  sendToVault(text);
 });
 
 </script>

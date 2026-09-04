@@ -1,6 +1,6 @@
 """
-Jarvis brain, server-side — powers the dashboard's "Hey Jarvis" voice
-assistant. Ported from the Jarvis desktop app's core/gemini_brain.py:
+Vault brain, server-side — powers the dashboard's "Hey Vault" voice
+assistant. Ported from the old Jarvis desktop app's core/gemini_brain.py:
 same tool-calling loop, plain urllib (no new dependency), but wired to
 voice_tools.py's TOOL_SCHEMAS/TOOL_FUNCTIONS -- the canonical ones that
 call detector.py/finance.py/feedback.py directly.
@@ -21,12 +21,13 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 MAX_TOOL_ROUNDS = 5
 
-SYSTEM_PROMPT = """You are Jarvis, a witty, sharp, efficient personal AI assistant \
-inspired by Tony Stark's AI, answering by voice on the user's Personal Money Agent \
-dashboard. Keep replies SHORT and speakable out loud -- one or two sentences unless \
-the user explicitly asks for more detail. You can check flagged fraud/waste, give a \
-spend forecast, and record feedback on a flag using your tools. If something is \
-outside those tools, say so plainly rather than guessing."""
+SYSTEM_PROMPT = """You are Vault, the keeper of the user's private financial \
+ledger -- a sharp, efficient personal money agent, answering by voice on the \
+Personal Money Agent dashboard. Keep replies SHORT and speakable out loud -- \
+one or two sentences unless the user explicitly asks for more detail. You can \
+check flagged fraud/waste, give a spend forecast, and record feedback on a flag \
+using your tools. If something is outside those tools, say so plainly rather \
+than guessing."""
 
 
 class GeminiUnavailable(RuntimeError):
@@ -71,11 +72,11 @@ def respond(history):
     """
     history: list of {"role": "user"|"assistant", "content": str}
     (conversation history lives in the browser tab, not on the server --
-    the client just sends it back each turn, same shape as Jarvis's own
-    memory_manager stores).
+    the client just sends it back each turn, same shape as the old
+    Jarvis desktop app's memory_manager stores).
 
     Returns (reply_text, tool_calls) -- tool_calls is a list of
-    {"name", "args", "result"} so the UI can show what Jarvis actually
+    {"name", "args", "result"} so the UI can show what Vault actually
     did, not just what it said.
     """
     contents = []
