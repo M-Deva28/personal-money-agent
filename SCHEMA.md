@@ -49,6 +49,70 @@
 - **Every decision** logged to shared audit trail:
   `{event_id, detected_pattern, confidence, action_taken, reasoning, timestamp}`
 
+## Multi-user layer (auth upgrade)
+
+### User
+| Field | Type | Notes |
+|---|---|---|
+| id | string | folder name under `data/users/<id>/` |
+| email | string | unique (lowercased), format-verified at signup |
+| name | string | display name |
+| password | dict | `{algorithm: pbkdf2_sha256, salt, iterations, hash}` — never plaintext |
+| created_at | ISO datetime | |
+
+Per-user files: `transactions.json`, `subscriptions.json`,
+`profile.json` (feedback.py's `DEFAULT_PROFILE` shape),
+`ground_truth.json` (only the seeded demo account has labels),
+`audit_trail.json`, `connections.json`, `connected_accounts.json`,
+`razorpay_ids.json`. The bundled `data/*.json` files
+remain the canonical demo dataset and seed the demo account on first
+start (`store.migrate_legacy_data()`).
+
+### Growth mode & autopay (bills)
+| Field | Type | Notes |
+|---|---|---|
+| autopay_enabled_merchants | list[string] | per-user profile field (`feedback.set_autopay`); explicit opt-in per merchant — never inferred |
+| connected_accounts.json | list | AA-style simulated consent flow: `{account_id, provider_id, provider_name, via, connected_at, consent_scope}` |
+| razorpay_ids.json | dict | real test-mode entities per user: `{subscriptions: {merchant: {plan_id, subscription_id}}, orders: {merchant: order_id}}` — created by `setup_razorpay_entities.py` |
+
+`GET /growth` returns subscriptions whose `next_due_date` is within 14
+days (overdue ones included), each with `days_until_due`, `overdue`, and
+`planned_action` (`auto_pay` only when the merchant is in
+`autopay_enabled_merchants`, else `remind_only`). `next_due_date` is
+*trusted as stored* — `generate_data.py` and manual subscription entry
+both set it correctly at creation time (see the history note in
+growth.py for the two bugs this avoids).
+
+### Transaction additions (source tracking)
+| Field | Type | Notes |
+|---|---|---|
+| source | enum: manual / bank_feed_demo (optional) | where the row came from; absent on bundled rows |
+| added_at / imported_at | ISO datetime (optional) | when the row entered the ledger |
+| account | string | manual entries: "manual"; feed rows: "<Bank> ••••1234" |
+
+### Bank connection
+| Field | Type | Notes |
+|---|---|---|
+| fund_account_id | string | RazorpayX reference (or `fa_demo_*` in simulated mode) |
+| holder_name | string | |
+| masked_account | string | raw account number is never stored |
+| ifsc | string | 11-char, validated |
+| bank_name | string | from IFSC prefix (mocked) or RazorpayX (live) |
+| mode | enum: live / mocked | live only when RAZORPAY keys are set |
+| status | enum: active / ... | |
+| connected_at / synced_at | ISO datetime or null | |
+| source_of_transactions | enum | bank_feed_demo (see honest-sync note in README) |
+
+### Auth & session spec
+- `POST /register` → validates name/email/password (≥8 chars), 400 on
+  duplicate email; auto-logs-in.
+- `POST /login` / `POST /logout` → sets / clears the `pma_session` cookie.
+- Cookie: signed `user_id.expiry.hmac` (HMAC-SHA256, server secret from
+  `PMA_SECRET_KEY` or `data/.secret`), HttpOnly, SameSite=Lax, 7-day TTL.
+- All data endpoints depend on `current_user` and 401 without a session.
+- Isolation: routes address only `data/users/<user_id>/*` resolved from
+  the session — never from user-supplied paths.
+
 ## Metrics to report in the demo
 
 - Precision / recall per pattern (against planted ground truth)

@@ -31,9 +31,7 @@ next person doesn't reintroduce either bug:
      scratch instead of reading what the generator now correctly
      computed, it rolled EVERY subscription forward regardless of
      pattern -- including payment_failed ones -- which erased the
-     only genuinely-overdue bills in the dataset. Confirmed via a
-     direct test: "any bill actually overdue?" returned False even
-     with a payment_failed merchant in the data.
+     only genuinely-overdue bills in the dataset.
 
 The correct fix is neither "always trust the field" nor "always
 recompute it" -- it's "fix it once, correctly, at the source, and
@@ -43,24 +41,52 @@ payment_failed, which keeps a real small overdue window). This file
 goes back to reading next_due_date directly. Manually-added
 subscriptions (accounts.py) also set a correct, current next_due_date
 at creation time, so trusting the field is correct for both sources.
+
+Per-user: main.py calls set_user_context(user_dir) before invoking
+growth_summary(), so bills are computed against THE LOGGED-IN USER's
+subscriptions/transactions/profile (same thread-local pattern as
+voice_tools.py). The CLI scripts never set a context and keep using
+the bundled data/ dataset.
 """
 
 import json
 import os
+import threading
 from datetime import datetime
+
+from feedback import load_profile
+from razorpay_actions import execute_bill_payment
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
+_CTX = threading.local()
+
+
+def set_user_context(user_dir):
+    _CTX.user_dir = user_dir
+
+
+def _dir():
+    return getattr(_CTX, "user_dir", None) or DATA_DIR
+
 
 def _load(name):
-    with open(os.path.join(DATA_DIR, name)) as f:
+    with open(os.path.join(_dir(), name), encoding="utf-8") as f:
         return json.load(f)
+
+
+def _profile_path():
+    ud = getattr(_CTX, "user_dir", None)
+    return os.path.join(ud, "profile.json") if ud else None
 
 
 def _as_of_default(transactions):
     """Same convention as detector.py: treat the dataset's latest
     transaction as 'now', so the demo's internal clock is consistent
-    across every mode rather than drifting against the real calendar."""
+    across every mode rather than drifting against the real calendar.
+    Falls back to the real clock for an empty ledger (fresh accounts)."""
+    if not transactions:
+        return datetime.utcnow()
     return max(datetime.fromisoformat(t["timestamp"]) for t in transactions)
 
 
@@ -107,13 +133,10 @@ def growth_summary(profile=None, subscriptions=None, transactions=None, as_of=No
     defaulted to on.
     """
     if profile is None:
-        from feedback import load_profile
-        profile = load_profile()
+        profile = load_profile(path=_profile_path())
 
     autopay_merchants = set(profile.get("autopay_enabled_merchants", []))
     bills = list_upcoming_bills(subscriptions, transactions, as_of)
-
-    from razorpay_actions import execute_bill_payment
 
     for bill in bills:
         bill["autopay_enabled"] = bill["merchant_name"] in autopay_merchants

@@ -10,10 +10,16 @@ Three fallback layers, in order:
      we've created real Razorpay entities for)
   3. Keys present AND a real entity exists (from setup_razorpay_entities.py)
      -> genuine API call against your Razorpay test-mode account
+
+Per-user: main.py calls set_user_context(user_dir) so the real-ID lookup
+reads razorpay_ids.json from THE LOGGED-IN USER's directory (created by
+setup_razorpay_entities.py for that account). The CLI scripts never set a
+context and keep using the bundled data/ directory.
 """
 
 import os
 import json
+import threading
 from datetime import datetime
 
 try:
@@ -25,12 +31,23 @@ except ImportError:
     _KEYS_PRESENT = False
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-_IDS_PATH = os.path.join(DATA_DIR, "razorpay_ids.json")
+
+_CTX = threading.local()
+
+
+def set_user_context(user_dir):
+    _CTX.user_dir = user_dir
+
+
+def _ids_path():
+    ud = getattr(_CTX, "user_dir", None)
+    return os.path.join(ud, "razorpay_ids.json") if ud else os.path.join(DATA_DIR, "razorpay_ids.json")
 
 
 def _load_real_ids():
-    if os.path.exists(_IDS_PATH):
-        with open(_IDS_PATH) as f:
+    path = _ids_path()
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return {"subscriptions": {}, "orders": {}}
 
@@ -77,10 +94,9 @@ def execute_action(flag):
                 result["mode"] = "mocked"
                 result["status"] = "mocked_success"
                 result["detail"] = (
-                    f"No real Razorpay subscription for '{merchant}' -- this test "
-                    f"account's Subscriptions product isn't fully activated (dashboard "
-                    f"plan creation also fails on this account), so pause actions are "
-                    f"honestly simulated rather than faked as live."
+                    f"No real Razorpay subscription for '{merchant}' -- run "
+                    f"setup_razorpay_entities.py to create one in this "
+                    f"account's test mode; simulated instead."
                 )
                 return result
 
@@ -101,8 +117,8 @@ def execute_action(flag):
                 result["status"] = "mocked_success"
                 result["detail"] = (
                     f"Keys are live, but no real Razorpay order exists for "
-                    f"'{merchant}' yet. Run setup_razorpay_entities.py to create one -- "
-                    f"simulated instead."
+                    f"'{merchant}' yet. Run setup_razorpay_entities.py to "
+                    f"create one -- simulated instead."
                 )
                 return result
 
@@ -111,10 +127,11 @@ def execute_action(flag):
             result["razorpay_order_id"] = real_order
             result["detail"] = (
                 f"Refund claim logged against real Razorpay test-mode order "
-                f"{real_order} for {merchant}. (Note: actually capturing a refund "
-                f"requires the order to have a captured payment first, which needs "
-                f"the checkout flow -- this demonstrates the real API call and "
-                f"entity linkage, not a fully captured-then-refunded cycle.)"
+                f"{real_order} for {merchant}. (Note: actually capturing a "
+                f"refund requires the order to have a captured payment "
+                f"first, which needs the checkout flow -- this demonstrates "
+                f"the real API call and entity linkage, not a fully "
+                f"captured-then-refunded cycle.)"
             )
 
         else:

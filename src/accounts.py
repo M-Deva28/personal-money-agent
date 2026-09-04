@@ -10,21 +10,26 @@ consent, and an account appears as connected. No credentials are ever
 collected -- that's the whole point of the AA model, and the mock
 preserves that shape rather than faking a bank login form.
 
+NOTE: this is the base project's AA-style simulation, ported for
+feature parity. The Enhanced dashboard's "Bank accounts" panel instead
+uses the REAL RazorpayX connect (bank_connect.py), which validates
+account details live -- this module's endpoints remain available for
+API-level parity and for the consent-flow concept itself.
+
 Manual entry is the other on-ramp: a user can add a transaction or
-subscription by hand, which is appended to the same data files the
-detector already reads -- so manually-entered data flows through
+subscription by hand, which is appended to the same per-user data files
+the detector already reads -- so manually-entered data flows through
 detection, scoring, finance, and growth exactly like generated data.
+
+Per-user: every function takes a user_id and reads/writes inside
+data/users/<user_id>/ via store.py.
 """
 
-import json
 import os
 import uuid
 from datetime import datetime, date
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-ACCOUNTS_PATH = os.path.join(DATA_DIR, "connected_accounts.json")
-TRANSACTIONS_PATH = os.path.join(DATA_DIR, "transactions.json")
-SUBSCRIPTIONS_PATH = os.path.join(DATA_DIR, "subscriptions.json")
+import store
 
 # Mock catalog of AA-registered providers a user could "pick" -- mirrors
 # the real-world picker (that's genuinely just choosing a bank/AA app).
@@ -37,23 +42,11 @@ AA_PROVIDERS = [
 ]
 
 
-def _load_json(path, default):
-    if os.path.exists(path):
-        with open(path) as f:
-            return json.load(f)
-    return default
+def list_connected_accounts(user_id: str):
+    return store.read_user_json(user_id, "connected_accounts.json", [])
 
 
-def _save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def list_connected_accounts():
-    return _load_json(ACCOUNTS_PATH, [])
-
-
-def connect_account(provider_id: str):
+def connect_account(user_id: str, provider_id: str):
     """
     Simulates the AA consent flow completing successfully: user picked a
     provider, approved a scoped consent artifact, account now streams
@@ -64,85 +57,56 @@ def connect_account(provider_id: str):
     if not provider:
         raise ValueError(f"Unknown provider_id: {provider_id}")
 
-    accounts = list_connected_accounts()
-    if any(a["provider_id"] == provider_id for a in accounts):
-        return accounts  # already connected, no-op
+    with store.user_write_lock(user_id):
+        accounts = list_connected_accounts(user_id)
+        if any(a["provider_id"] == provider_id for a in accounts):
+            return accounts  # already connected, no-op
 
-    accounts.append({
-        "account_id": f"acc_{uuid.uuid4().hex[:8]}",
-        "provider_id": provider["provider_id"],
-        "provider_name": provider["name"],
-        "via": provider["via"],
-        "connected_at": datetime.utcnow().isoformat(),
-        "consent_scope": "transactions, balances -- 12 months, revocable any time",
-    })
-    _save_json(ACCOUNTS_PATH, accounts)
-    return accounts
-
-
-def disconnect_account(account_id: str):
-    accounts = [a for a in list_connected_accounts() if a["account_id"] != account_id]
-    _save_json(ACCOUNTS_PATH, accounts)
-    return accounts
+        accounts.append({
+            "account_id": f"acc_{uuid.uuid4().hex[:8]}",
+            "provider_id": provider["provider_id"],
+            "provider_name": provider["name"],
+            "via": provider["via"],
+            "connected_at": datetime.utcnow().isoformat(),
+            "consent_scope": "transactions, balances -- 12 months, revocable any time",
+        })
+        store.write_user_json(user_id, "connected_accounts.json", accounts)
+        return accounts
 
 
-def add_manual_transaction(payload: dict):
+def disconnect_account(user_id: str, account_id: str):
+    with store.user_write_lock(user_id):
+        accounts = [a for a in list_connected_accounts(user_id) if a["account_id"] != account_id]
+        store.write_user_json(user_id, "connected_accounts.json", accounts)
+        return accounts
+
+
+def add_manual_subscription(user_id: str, payload: dict):
     """
-    Appends a user-entered transaction to the same file the detector
-    reads. Required fields match SCHEMA.md's Transaction entity;
-    anything omitted gets a sane default so a quick manual entry
-    doesn't require every field.
-
-    Note: uses `payload.get(x) or default`, not `payload.get(x, default)`.
-    payload comes from a pydantic model's dict()/model_dump(), so every
-    optional key is already present with an explicit None value when
-    unset -- dict.get's default only kicks in for a MISSING key, so
-    `payload.get("memo", "Manually added")` silently returned None
-    instead of the fallback. Confirmed via a real crash: a memo of None
-    reached detect_refund_owed's `.lower()` call and raised
-    AttributeError. `or` catches both "missing" and "present but None".
+    Appends a user-entered subscription to the same per-user file the
+    detector/growth read. See add_manual_transaction's docstring --
+    same `or`-not-`get` fix applies here, and matters more: an unset
+    next_due_date/last_charged_date reaching growth.py or detector.py
+    as None (instead of today's date) would break date-rolling logic
+    that expects a parseable date string.
     """
-    transactions = _load_json(TRANSACTIONS_PATH, [])
-    entry = {
-        "id": f"txn_manual_{uuid.uuid4().hex[:8]}",
-        "timestamp": payload.get("timestamp") or datetime.utcnow().isoformat(),
-        "amount": float(payload["amount"]),
-        "direction": payload.get("direction") or "debit",
-        "merchant_name": payload["merchant_name"],
-        "category": payload.get("category") or "other",
-        "payment_mode": payload.get("payment_mode") or "upi",
-        "memo": payload.get("memo") or "Manually added",
-        "linked_subscription_id": payload.get("linked_subscription_id"),
-        "account": payload.get("account") or "manual_entry",
-    }
-    transactions.append(entry)
-    _save_json(TRANSACTIONS_PATH, transactions)
-    return entry
-
-
-def add_manual_subscription(payload: dict):
-    """
-    Appends a user-entered subscription to the same file the detector
-    reads. See add_manual_transaction's docstring -- same `or`-not-`get`
-    fix applies here, and matters more: an unset next_due_date/
-    last_charged_date reaching growth.py or detector.py as None (instead
-    of today's date) would break date-rolling logic that expects a
-    parseable date string.
-    """
-    subscriptions = _load_json(SUBSCRIPTIONS_PATH, [])
-    today = date.today().isoformat()
-    entry = {
-        "id": f"sub_manual_{uuid.uuid4().hex[:8]}",
-        "merchant_name": payload["merchant_name"],
-        "amount": float(payload["amount"]),
-        "billing_cycle": payload.get("billing_cycle") or "monthly",
-        "started_date": payload.get("started_date") or today,
-        "last_charged_date": payload.get("last_charged_date") or today,
-        "next_due_date": payload.get("next_due_date") or today,
-        "status": payload.get("status") or "active",
-        "trial_end_date": payload.get("trial_end_date"),
-        "last_usage_signal_date": payload.get("last_usage_signal_date") or today,
-    }
-    subscriptions.append(entry)
-    _save_json(SUBSCRIPTIONS_PATH, subscriptions)
-    return entry
+    with store.user_write_lock(user_id):
+        subscriptions = store.read_user_json(user_id, "subscriptions.json", [])
+        today = date.today().isoformat()
+        entry = {
+            "id": f"sub_manual_{uuid.uuid4().hex[:8]}",
+            "merchant_name": payload["merchant_name"],
+            "amount": float(payload["amount"]),
+            "billing_cycle": payload.get("billing_cycle") or "monthly",
+            "started_date": payload.get("started_date") or today,
+            "last_charged_date": payload.get("last_charged_date") or today,
+            "next_due_date": payload.get("next_due_date") or today,
+            "status": payload.get("status") or "active",
+            "trial_end_date": payload.get("trial_end_date"),
+            "last_usage_signal_date": payload.get("last_usage_signal_date") or today,
+            "source": "manual",
+            "added_at": datetime.utcnow().isoformat(),
+        }
+        subscriptions.append(entry)
+        store.write_user_json(user_id, "subscriptions.json", subscriptions)
+        return entry

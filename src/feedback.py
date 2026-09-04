@@ -16,6 +16,10 @@ from datetime import datetime
 
 PROFILE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "user_profile.json")
 
+# The CLI scripts (score.py, feedback_demo.py) keep using the bundled
+# data/user_profile.json via the defaults below; main.py passes each
+# user's own profile path explicitly.
+
 DEFAULT_PROFILE = {
     "zombie_sub_days": 60,               # global default idle threshold
     "zombie_sub_days_by_merchant": {},   # per-merchant overrides learned from feedback
@@ -28,27 +32,36 @@ DEFAULT_PROFILE = {
 }
 
 
-def load_profile():
-    if os.path.exists(PROFILE_PATH):
-        with open(PROFILE_PATH) as f:
+def load_profile(path=None):
+    path = path or PROFILE_PATH
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return json.loads(json.dumps(DEFAULT_PROFILE))  # deep copy
 
 
-def save_profile(profile):
-    with open(PROFILE_PATH, "w") as f:
+def save_profile(profile, path=None):
+    # Atomic write (temp file + os.replace) — readers never observe a
+    # half-written profile, and concurrent writers can't interleave on
+    # Windows (see store.py for the same pattern).
+    path = path or PROFILE_PATH
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(profile, f, indent=2)
+    os.replace(tmp, path)
 
 
-def record_feedback(flag, verdict, merchant_name=None):
+def record_feedback(flag, verdict, merchant_name=None, profile_path=None):
     """
     flag: the original flag dict from the detector
     verdict: "confirmed" (agent was right) or "false_positive" (agent was wrong)
     merchant_name: needed for merchant-specific adjustments (e.g. zombie_sub)
+    profile_path: which user's profile to adjust (defaults to the bundled
+        demo profile, used by the CLI scripts)
 
     Returns the updated profile so callers can see what changed.
     """
-    profile = load_profile()
+    profile = load_profile(path=profile_path)
     pattern = flag["pattern"]
 
     entry = {
@@ -94,27 +107,31 @@ def record_feedback(flag, verdict, merchant_name=None):
             profile["refund_grace_days"] += 5
             entry["adjustment"] = f"refund grace period extended to {profile['refund_grace_days']} days"
 
-    save_profile(profile)
+    save_profile(profile, path=profile_path)
     return profile
 
 
-def reset_profile():
-    if os.path.exists(PROFILE_PATH):
-        os.remove(PROFILE_PATH)
+def reset_profile(path=None):
+    path = path or PROFILE_PATH
+    if os.path.exists(path):
+        os.remove(path)
 
 
-def set_autopay(merchant_name, enabled):
+def set_autopay(merchant_name, enabled, path=None):
     """
     Toggles bill autopay for a specific merchant. This is an explicit,
     per-merchant opt-in -- the agent never auto-pays a merchant the user
     hasn't specifically enabled it for, even for known/trusted merchants.
+
+    path: which user's profile to update (defaults to the bundled demo
+    profile, used by the CLI scripts). Returns the updated profile.
     """
-    profile = load_profile()
+    profile = load_profile(path=path)
     current = set(profile.get("autopay_enabled_merchants", []))
     if enabled:
         current.add(merchant_name)
     else:
         current.discard(merchant_name)
     profile["autopay_enabled_merchants"] = sorted(current)
-    save_profile(profile)
+    save_profile(profile, path=path)
     return profile

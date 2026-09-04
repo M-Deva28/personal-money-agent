@@ -52,7 +52,6 @@ def detect_zombie_subscriptions(subscriptions, as_of, profile=None):
                 "suggested_action": "pause_subscription",
                 "amount_at_stake": sub["amount"],
                 "days_idle": days_idle,
-                "merchant_name": sub["merchant_name"],
             })
     return flags
 
@@ -76,7 +75,6 @@ def detect_silent_conversion(subscriptions, as_of):
                 ),
                 "suggested_action": "flag_for_review",
                 "amount_at_stake": sub["amount"],
-                "merchant_name": sub["merchant_name"],
             })
     return flags
 
@@ -108,7 +106,6 @@ def detect_duplicate_charges(transactions, window_minutes=10):
                     ),
                     "suggested_action": "initiate_refund_claim",
                     "amount_at_stake": curr["amount"],
-                    "merchant_name": curr["merchant_name"],
                 })
     return flags
 
@@ -145,7 +142,6 @@ def detect_price_hikes(transactions, profile=None):
                 ),
                 "suggested_action": "flag_for_review",
                 "amount_at_stake": round(latest["amount"] - baseline, 2),
-                "merchant_name": latest["merchant_name"],
             })
     return flags
 
@@ -181,7 +177,6 @@ def detect_refund_owed(transactions, as_of=None, profile=None):
                 ),
                 "suggested_action": "initiate_refund_claim",
                 "amount_at_stake": t["amount"],
-                "merchant_name": t["merchant_name"],
             })
     return flags
 
@@ -205,7 +200,6 @@ def detect_suspicious_collect(transactions, profile=None):
                 ),
                 "suggested_action": "flag_for_review",
                 "amount_at_stake": t["amount"],
-                "merchant_name": t["merchant_name"],
             })
     return flags
 
@@ -217,7 +211,11 @@ def run_all_detectors(transactions, subscriptions, as_of=None, profile=None):
     If None, hardcoded defaults are used (first-run / no history yet).
     """
     if as_of is None:
-        as_of = max(_parse(t["timestamp"]) for t in transactions)
+        # A brand-new account has an empty ledger — the "as of" reference
+        # point is simply now. (Before this guard, max() over an empty
+        # generator raised ValueError and made /flags 500 for fresh users.)
+        parsed = [_parse(t["timestamp"]) for t in transactions]
+        as_of = max(parsed) if parsed else datetime.utcnow()
 
     flags = []
     flags += detect_zombie_subscriptions(subscriptions, as_of, profile)

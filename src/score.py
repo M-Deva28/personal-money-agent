@@ -10,9 +10,6 @@ import os
 import sys
 from collections import defaultdict
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
-
 from detector import run_all_detectors
 from audit import log_decision, decide_action, clear_log
 from feedback import load_profile
@@ -27,6 +24,12 @@ def load(name):
 
 
 def main():
+    # Windows consoles default to cp1252/latin-1, which can't encode the
+    # rupee sign (₹) used throughout the report -- force UTF-8 so the
+    # demo never dies mid-print on a fresh machine.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     transactions = load("transactions.json")
     subscriptions = load("subscriptions.json")
     ground_truth = load("ground_truth.json")

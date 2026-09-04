@@ -7,86 +7,25 @@ transactions and subscriptions, flags waste/fraud/forgotten refunds, and
 takes bounded, explainable action — with every decision logged to an
 audit trail.
 
-## Status: Day 6 — Growth mode live (real feature, not scripted) ✅
+## Status
 
 - [x] Synthetic dataset with planted, labeled patterns (`data/`)
 - [x] Rule-based detection engine — 6 patterns, confidence-gated (`src/detector.py`)
 - [x] Audit trail logger — every decision explained and logged (`src/audit.py`)
 - [x] Scoring pipeline — precision/recall against ground truth (`src/score.py`, `src/scoring.py`)
-- [x] Feedback loop — per-user, per-merchant adaptive thresholds (`src/feedback.py`)
+- [x] Feedback loop — adaptive thresholds, now per-user (`src/feedback.py`)
 - [x] LLM layer — reviews medium-confidence flags only, degrades gracefully without API key (`src/llm_reasoner.py`)
-- [x] Razorpay test-mode action executor — real API calls confirmed working (`src/razorpay_actions.py`)
-- [x] FastAPI service — `/flags`, `/feedback`, `/audit`, `/score`, `/finance`, `/growth` all tested live (`src/main.py`)
-- [x] Passbook-style dashboard — live at `/dashboard` (`static/index.html`)
-- [x] Finance mode — category breakdown + moving-average forecast (`src/finance.py`)
-- [x] Growth mode — real upcoming/overdue bill detection with opt-in autopay (`src/growth.py`)
-- [x] Tabbed dashboard with login gate, mock Account Aggregator connect flow, and manual transaction/subscription entry (`static/index.html`, `src/accounts.py`)
-- [ ] Get Anthropic API key set and confirm LLM layer actually runs (still untested end-to-end)
-- [ ] End-to-end run + final metrics (Day 7)
-- [ ] Repo polish + pitch video (Day 8)
-
-## Growth mode
-Detects bills coming due or already overdue, using each subscription's
-`next_due_date` (a field that existed in the synthetic data from Day 1
-but no detector had ever read). Verified against real data: 9 of 10
-active subscriptions are currently overdue, one (Netflix) is genuinely
-upcoming -- both scenarios exercised for real.
-
-**Hard rule, not just a default**: the agent never auto-pays a bill
-unless the user has explicitly enabled autopay for that specific
-merchant (`POST /growth/autopay`). Nothing is inferred from trust
-built elsewhere in the system -- autopay consent is deliberate and
-per-merchant, always.
-
-
-## Account connection & manual entry
-The dashboard now has a login gate, an "Accounts" tab, and a tab/section
-layout instead of one long scroll. Two honest things worth saying about
-this, the same way Finance mode's limitations are stated above rather
-than glossed over:
-
-- **Login is a demo gate, not real auth.** `POST /auth/login` accepts
-  any non-empty username/password and issues no token — it exists so
-  the pitch can show an account-scoped agent, not to secure anything.
-- **"Connect account" simulates the Account Aggregator (AA) consent
-  flow**, not a real bank link. Picking a provider in the Accounts tab
-  calls `POST /accounts/connect`, which records a mock consent artifact
-  (scope, provider, timestamp) — no credentials are collected, which is
-  the actual point of the AA model (Setu/Finvu/OneMoney/Anumati) this
-  mirrors. A production build would swap this for a real AA SDK
-  integration feeding the same `transactions.json`/`subscriptions.json`
-  shape.
-- **Manual entry is real, not mocked.** `POST /transactions/manual` and
-  `POST /subscriptions/manual` (`src/accounts.py`) append directly to
-  the same data files the detector reads, so a hand-entered transaction
-  or subscription flows through detection, scoring, finance, and bills
-  exactly like generated data does.
-
-## Why Finance mode isn't ML
-Tested a Kaggle banking dataset for merchant categorization first. Found
-its category labels were assigned independently of merchant name (310
-of 327 repeat merchants showed 2+ different categories across
-appearances — see `verify_kaggle_signal.py`), meaning a classifier
-trained on it would memorize noise, not learn anything real. A lookup
-against a known, finite personal merchant list is the honest, correct
-tool here — real personal finance apps do the same for this reason.
-The forecast is a plain moving average, labeled as a statistical
-projection rather than framed as AI.
-
-
-## View the dashboard
-
-```bash
-cd src
-uvicorn main:app --reload --port 8000
-```
-
-Then open `http://localhost:8000/dashboard/` in your browser. Click
-**Confirm** or **False Alarm** on any row — the ledger and the balance
-strip at the top update live, without a page reload. This is the core
-demo moment for the pitch video: it proves the feedback loop is real,
-not just numbers in a terminal.
-
+- [x] Razorpay test-mode action executor — mocks gracefully without keys (`src/razorpay_actions.py`)
+- [x] Dashboard UI — ledger, audit tape, finance, Jarvis (static/dashboard.html)
+- [x] Finance mode: spend categorization + forecast
+- [x] **Multi-user accounts & auth** — register/login, per-user isolation, signed sessions (`src/security.py`, `src/store.py`)
+- [x] **Manual transaction entry** — add expenses by hand via the dashboard or `POST /transactions`
+- [x] **Manual subscription entry** — add recurring bills by hand (`src/accounts.py`, `POST /subscriptions/manual`)
+- [x] **Bank account connection** — RazorpayX (test-mode) fund accounts, with auto-import (`src/bank_connect.py`)
+- [x] **Live RazorpayX test mode** — connect / sync / disconnect verified end-to-end against real test-mode keys
+- [x] **Growth mode: bills & autopay** — upcoming/overdue bill reminders with explicit per-merchant autopay opt-in (`src/growth.py`, `POST /growth`, `POST /growth/autopay`)
+- [x] **Real Razorpay entities for actions** — `setup_razorpay_entities.py` creates real test-mode plans/subscriptions/orders; pause/refund/autopay then run live per merchant (`src/razorpay_actions.py`)
+- [ ] Repo polish + pitch video
 
 ## Run the API
 
@@ -95,12 +34,27 @@ cd src
 uvicorn main:app --reload --port 8000
 ```
 
-Then visit `http://localhost:8000/docs` for interactive API docs, or:
+Then open `http://localhost:8000/login.html` (or `/register.html`) in a browser,
+or `http://localhost:8000/docs` for interactive API docs.
+
+**Demo account** (seeded with the bundled dataset, one click on the login
+page): `demo@pma.local` / `demo1234`
+
+On first start the bundled `data/*.json` demo dataset is copied into that
+demo account under `data/users/demo/` — the dashboard shows exactly the
+same metrics the CLI demos report. Newly registered accounts start empty.
+
+Every data endpoint requires a session. From curl, sign in first and reuse
+the cookie jar:
 
 ```bash
-curl http://localhost:8000/flags
-curl http://localhost:8000/score
-curl -X POST http://localhost:8000/feedback \
+curl -c /tmp/jar -X POST http://localhost:8000/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "demo@pma.local", "password": "demo1234"}'
+
+curl -b /tmp/jar http://localhost:8000/flags
+curl -b /tmp/jar http://localhost:8000/score
+curl -b /tmp/jar -X POST http://localhost:8000/feedback \
   -H "Content-Type: application/json" \
   -d '{"flag_id": "<flag_id from /flags>", "verdict": "false_positive", "merchant_name": "Notion"}'
 ```
@@ -109,6 +63,44 @@ curl -X POST http://localhost:8000/feedback \
 single subscription can trigger more than one pattern (e.g. both
 `zombie_sub` and `silent_conversion`), so `flag_id` (`event_id__pattern`)
 is what's actually unique.
+
+### Connecting a bank + auto/manual transactions
+
+- **Manual**: "＋ Add expense" on the dashboard, or `POST /transactions`
+  (`amount`, `merchant_name`, `category`, `payment_mode`, `timestamp`…).
+  Rows are tagged `source: "manual"`; a near-identical entry within 2
+  minutes is treated as a double-submit and skipped.
+- **Automatic**: "Bank accounts" → connect with holder name, account
+  number, and IFSC. With `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` in `.env`
+  this runs against RazorpayX test mode (real fund-account validation);
+  without keys it is clearly-labeled simulated mode. "Sync now"
+  auto-imports transactions (`source: "bank_feed_demo"`) — note RazorpayX
+  validates accounts but does not stream personal statements, so live
+  transaction-level import needs a real statement provider.
+
+### Bills / Growth mode (upcoming + autopay)
+
+Growth mode looks *forward*: subscriptions whose `next_due_date` falls
+within 14 days (including genuinely overdue ones) become bill reminders
+on the dashboard. The agent **never auto-pays a bill the user hasn't
+explicitly opted into** — each bill row has an "Enable autopay" toggle
+(`POST /growth/autopay`, stored per-user in the profile as
+`autopay_enabled_merchants`). Opted-in bills report an execution result
+(mocked without keys, real Razorpay order linkage when
+`setup_razorpay_entities.py` has created entities for that merchant).
+
+- `GET /growth` — upcoming/overdue bills + which merchants have autopay on
+- `POST /growth/autopay` — `{merchant_name, enabled}` per-merchant opt-in/opt-out
+- `GET /subscriptions`, `POST /subscriptions/manual` — add a recurring bill by hand
+- `GET /accounts/providers` · `GET /accounts` · `POST /accounts/connect` ·
+  `POST /accounts/disconnect` — the base project's Account-Aggregator-style
+  consent simulation (per-user `connected_accounts.json`; the dashboard's
+  Bank panel uses the real RazorpayX connect instead, and these endpoints
+  are kept for API parity)
+
+Manual subscriptions flow through detection, scoring, finance, and bills
+exactly like generated data (they land in the same per-user
+`subscriptions.json` the detector reads).
 
 
 ## Why rules + feedback loop + LLM (not any one alone)
@@ -131,8 +123,12 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-cp .env.example .env            # add your ANTHROPIC_API_KEY when you have one
+cp .env.example .env            # add your API keys when you have them
 ```
+
+Session signing uses `PMA_SECRET_KEY` if set; otherwise the server
+auto-generates `data/.secret` on first run (fine for a local demo — set
+the env var for a real deployment).
 
 ## Quickstart
 
@@ -190,6 +186,33 @@ data/subscriptions.json ┴─> detector.py (6 rule-based pattern detectors)
                   feedback.py → data/user_profile.json
                   (adjusts thresholds for NEXT run)
 ```
+
+## Multi-user accounts, auth & data protection
+
+Each account owns a private folder under `data/users/<user_id>/` with its
+own `transactions.json`, `subscriptions.json`, `profile.json` (learned
+thresholds, incl. `autopay_enabled_merchants`), `ground_truth.json`,
+`audit_trail.json`, `connections.json` (RazorpayX fund accounts),
+`connected_accounts.json` (AA-style simulation), and `razorpay_ids.json`
+(real test-mode Razorpay entities, created by `setup_razorpay_entities.py`). The bundled `data/*.json` files remain the canonical
+demo dataset that the CLI scripts (`score.py`, demos) and the demo account
+run against.
+
+- **Passwords** are never stored or logged — salted PBKDF2-HMAC-SHA256
+  (600k iterations) via `src/security.py`.
+- **Sessions** are signed HMAC tokens in HttpOnly, SameSite=Lax cookies.
+  `/logout` clears them; all data endpoints return 401 without a session.
+- **Isolation** is enforced in `src/store.py`: every route resolves the
+  logged-in user id and reads/writes only that user's directory — a user
+  can never request another account's data through the API.
+- **Bank numbers** are stored masked (`••••2323`); the raw account number
+  is only sent to RazorpayX (test mode) and never persisted.
+- **Honest limits** (demo-grade, not bank-grade): no rate limiting, no
+  email verification/KYC, no encryption at rest of the JSON files, HTTP
+  not HTTPS on localhost. Do not put real credentials or production
+  financial data behind this without addressing those.
+
+Auth endpoints: `POST /register`, `POST /login`, `POST /logout`, `GET /me`.
 
 ## The six detection patterns
 

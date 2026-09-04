@@ -64,9 +64,9 @@ def build_subscriptions(n=10):
         cycle = "monthly"
         trial_end = started + timedelta(days=14) if random.random() < 0.3 else None
         last_charged = rand_date(started, END_DATE - timedelta(days=5))
-        # Placeholder — recomputed after transactions exist and the real
-        # as_of (max transaction timestamp) is known. See _resolve_next_due_dates().
-        next_due = last_charged + timedelta(days=30)
+        next_due = last_charged + timedelta(days=30)  # placeholder -- recomputed
+        # after transactions exist and the real as_of (max transaction
+        # timestamp) is known. See _resolve_next_due_dates().
 
         pattern = "clean"
         status = "active"
@@ -261,15 +261,17 @@ def _resolve_next_due_dates(subs, sub_patterns, txns):
 def main():
     subs, sub_labels = build_subscriptions(n=10)
     txns, txn_labels = build_transactions(subs, n_extra=60)
+
     sub_patterns = {g["id"]: g["label"] for g in sub_labels}
     subs = _resolve_next_due_dates(subs, sub_patterns, txns)
 
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(os.path.join(DATA_DIR, "transactions.json"), "w", encoding="utf-8") as f:
+    # Write into data/ regardless of the CWD the script is launched from
+    # (other modules resolve the data dir the same way -- see score.py).
+    with open(os.path.join(DATA_DIR, "transactions.json"), "w") as f:
         json.dump(txns, f, indent=2)
-    with open(os.path.join(DATA_DIR, "subscriptions.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(DATA_DIR, "subscriptions.json"), "w") as f:
         json.dump(subs, f, indent=2)
-    with open(os.path.join(DATA_DIR, "ground_truth.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(DATA_DIR, "ground_truth.json"), "w") as f:
         json.dump(sub_labels + txn_labels, f, indent=2)
 
     print(f"Generated {len(txns)} transactions, {len(subs)} subscriptions, "

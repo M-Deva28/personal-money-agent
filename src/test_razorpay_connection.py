@@ -34,7 +34,8 @@ def main():
         print(f"   Key ID: {key_id}")
         print(f"   Existing orders in this test account: {result.get('count', 0)}")
         print()
-        print("You're ready for the next step: creating demo subscriptions/payments.")
+        print("You're ready for the next step: creating demo subscriptions/payments "
+              "(python src/setup_razorpay_entities.py).")
     except Exception as e:
         print(f"❌ Connection failed: {e}")
         print("   Double check your Key ID and Key Secret are correct and you're")

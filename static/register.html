@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Create account — Personal Money Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/auth.css">
+</head>
+<body>
+
+<div class="a-stage">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+
+  <div class="a-wrap">
+    <div class="a-card">
+
+      <!-- ======================= brand panel ======================= -->
+      <aside class="a-brand">
+        <div class="sticker">New account</div>
+
+        <div class="brand-word">
+          <h1>Personal Money Agent</h1>
+          <span class="sub">your account, your data</span>
+        </div>
+        <p class="brand-tag">
+          Every account is its own sealed vault: separate transactions,
+          thresholds, audit trail, and bank connections. Nothing you enter
+          here is shared with anyone else's ledger.
+        </p>
+
+        <div class="console" aria-hidden="true">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="row"><span class="k">vault</span><span class="v ok">sealed</span></div>
+          <div class="row"><span class="k">password</span><span class="v ok">hashed</span></div>
+          <div class="row"><span class="k">thresholds</span><span class="v warn">fresh</span></div>
+          <div class="row"><span class="k">session</span><span class="v ok">minted</span><span class="cursor">▊</span></div>
+        </div>
+
+        <div class="a-stamp">
+          <span class="big">VAULT</span>
+          <span class="lbl">per-user sealed</span>
+        </div>
+
+        <ul class="trust">
+          <li><span class="tick">✓</span><span>Full per-user isolation — separate transactions, thresholds, and <b>audit trail</b>.</span></li>
+          <li><span class="tick">✓</span><span>Identity details are <b>format- and uniqueness-verified</b> at signup.</span></li>
+          <li><span class="tick">✓</span><span>Bank numbers are stored <b>masked</b>; raw details only go to RazorpayX test mode.</span></li>
+        </ul>
+      </aside>
+
+      <!-- ======================= form panel ======================= -->
+      <section class="a-form">
+        <h2>Create your account</h2>
+        <p class="a-sub">You start empty — then connect a bank or add expenses
+          by hand, and the agent starts watching. Takes about <code>20 seconds</code>.</p>
+
+        <div class="err" id="err" role="alert"><span class="ico">!</span><span class="tx"></span></div>
+
+        <form id="regForm" novalidate>
+          <div class="field">
+            <label for="name">Full name</label>
+            <div class="in-wrap">
+              <span class="lead"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg></span>
+              <input type="text" id="name" autocomplete="name" placeholder="Ada Lovelace" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="email">Email</label>
+            <div class="in-wrap">
+              <span class="lead"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+              <input type="email" id="email" autocomplete="email" placeholder="you@example.com" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="in-wrap">
+              <span class="lead"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+              <input type="password" id="password" autocomplete="new-password" placeholder="at least 8 characters" required />
+              <button type="button" class="pw-toggle" data-pw-toggle="password" aria-label="Show password" tabindex="-1">
+                <span class="eye" style="display:flex;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <span class="eye-off" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3 3.8"/><path d="M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></span>
+              </button>
+            </div>
+            <div class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <div class="strength-label" id="pwLabel"></div>
+          </div>
+
+          <ul class="rule-checks" id="pwRules">
+            <li id="r-len"><span class="ck">✓</span><span>At least 8 characters</span></li>
+            <li id="r-case"><span class="ck">✓</span><span>Upper &amp; lower case letters</span></li>
+            <li id="r-num"><span class="ck">✓</span><span>A number</span></li>
+            <li id="r-sym"><span class="ck">✓</span><span>A symbol</span></li>
+          </ul>
+
+          <div class="field" style="margin-top:14px;">
+            <label for="confirm">Confirm password</label>
+            <div class="in-wrap">
+              <span class="lead"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+              <input type="password" id="confirm" autocomplete="new-password" placeholder="repeat it once" required />
+              <button type="button" class="pw-toggle" data-pw-toggle="confirm" aria-label="Show password" tabindex="-1">
+                <span class="eye" style="display:flex;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <span class="eye-off" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3 3.8"/><path d="M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></span>
+              </button>
+            </div>
+            <div class="strength-label" id="matchLabel" style="color:var(--high);"></div>
+          </div>
+
+          <button class="btn" type="submit" id="submitBtn">
+            <span class="spin"></span><span class="b-label">Create account</span>
+          </button>
+        </form>
+
+        <div class="a-switch">
+          Already have an account?
+          <a href="/login.html">Sign in
+            <svg class="arr" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16m0 0-6-6m6 6-6 6"/></svg>
+          </a>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="/auth.js"></script>
+<script>
+(function () {
+  const $ = PMA.$;
+  const pw = $("#password");
+  const cf = $("#confirm");
+  const meterBars = PMA.$$(".meter i");
+  const pwLabel = $("#pwLabel");
+
+  PMA.tilt();
+
+  function paintRules(s, labelTxt, w) {
+    const checks = [
+      ["r-len", pw.value.length >= 8],
+      ["r-case", /[a-z]/.test(pw.value) && /[A-Z]/.test(pw.value)],
+      ["r-num", /\d/.test(pw.value)],
+      ["r-sym", /[^A-Za-z0-9]/.test(pw.value)],
+    ];
+    checks.forEach(([id, ok]) => {
+      const li = $("#" + id);
+      li.classList.toggle("pass", ok);
+    });
+    meterBars.forEach((bar, i) => {
+      bar.className = i < s ? "on-" + s : "";
+    });
+    if (pw.value) {
+      pwLabel.innerHTML = "Strength: <b class=\"w-" + w + "\">" + labelTxt + "</b>";
+    } else {
+      pwLabel.textContent = "";
+    }
+    checkMatch();
+  }
+
+  function checkMatch() {
+    const v = pw.value;
+    const m = $("#matchLabel");
+    if (!cf.value) { m.textContent = ""; cf.classList.remove("invalid", "valid"); return; }
+    if (v !== cf.value) {
+      m.textContent = "Passwords don't match yet.";
+      cf.classList.add("invalid"); cf.classList.remove("valid");
+    } else {
+      m.textContent = "";
+      cf.classList.remove("invalid"); cf.classList.add("valid");
+    }
+  }
+
+  pw.addEventListener("input", () => {
+    const s = PMA.strength(pw.value);
+    paintRules(s.score, s.label, s.score);
+  });
+  cf.addEventListener("input", checkMatch);
+
+  $("#regForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    PMA.clearErr();
+
+    const name = $("#name").value.trim();
+    const email = $("#email").value.trim();
+    const password = pw.value;
+
+    if (name.length < 2) return PMA.showErr("Please enter your full name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return PMA.showErr("That doesn't look like a valid email address.");
+    if (password.length < 8) return PMA.showErr("Password must be at least 8 characters.");
+    if (password !== cf.value) return PMA.showErr("Passwords don't match.");
+
+    const btn = $("#submitBtn");
+    const label = btn.querySelector(".b-label");
+    PMA.busy(btn, true);
+    label.textContent = "Sealing your vault…";
+    try {
+      const res = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        PMA.busy(btn, false);
+        label.textContent = "Create account";
+        PMA.showErr(data.detail || "Couldn't create the account.");
+        return;
+      }
+      btn.classList.add("ok");
+      label.textContent = "Welcome — opening your ledger…";
+      await new Promise(r => setTimeout(r, 650));
+      location.href = "/dashboard";
+    } catch (err) {
+      PMA.busy(btn, false);
+      label.textContent = "Create account";
+      PMA.showErr("Couldn't reach the agent backend. Is it running on port 8000?");
+    }
+  });
+})();
+</script>
+</body>
+</html>
