@@ -632,9 +632,14 @@ def connect_bank(body: ConnectIn, user_id: str = Depends(current_user)):
     test mode when keys are set; clearly-labeled simulation otherwise)."""
     acct = store.load_account(user_id)
     email = (acct or {}).get("email", "")
-    result = bank_connect.connect_bank_account(
-        body.holder_name, body.account_number, body.ifsc, body.phone or "", email
-    )
+    try:
+        result = bank_connect.connect_bank_account(
+            body.holder_name, body.account_number, body.ifsc, body.phone or "", email
+        )
+    except ValueError as e:
+        # Format validation (holder/account/IFSC/phone) raised a clean
+        # message -- surface it as a 400 instead of a 500 traceback.
+        raise HTTPException(status_code=400, detail=str(e))
     if not result["ok"]:
         raise HTTPException(status_code=502, detail=result["detail"])
 

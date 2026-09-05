@@ -731,6 +731,12 @@ async function connectBankAccount(e){
     ifsc: $("cIfsc").value.trim().toUpperCase(),
     phone: $("cPhone").value.trim(),
   };
+  if (!/^[A-Z]{4}[0-9A-Z]{7}$/.test(body.ifsc)){
+    modalError("IFSC must be an 11-character code, e.g. HDFC0001234.");
+    btn.disabled = false;
+    btn.textContent = "Connect account";
+    return;
+  }
   try {
     const res = await fetch(`${API}/bank/connect`, {
       method: "POST",
